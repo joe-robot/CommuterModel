@@ -14,11 +14,12 @@ private:
     repast::AgentId   id_;
     double              safety;
     double          thresh;
+    bool	Transtype;
 	
 public:
     Commuter(repast::AgentId id);
 	
-    Commuter(repast::AgentId id, double newSafe, double newThresh);
+    Commuter(repast::AgentId id, double newSafe, double newThresh, bool newTranstype);
 	
     ~Commuter();
 	
@@ -29,9 +30,10 @@ public:
     /* Getters specific to this kind of Agent */
     double getSafe(){                                      return safety;      }
     double getThresh(){                                  return thresh;  }
+    bool getTrans(){					return Transtype; }
 	
     /* Setter */
-    void set(int currentRank, double newSafe, double newThresh);
+    void set(int currentRank, double newSafe, double newThresh, bool newTranstype);
 	
     /* Actions */
     bool choosetrans();                                                 // Will decide trans method
@@ -49,10 +51,11 @@ public:
     int    currentRank;
     double safety;
     double thresh;
+    bool  Transtype;
 	
     /* Constructors */
     CommuterPackage(); // For serialization
-    CommuterPackage(int _id, int _rank, int _type, int _currentRank, double _safety, double _thresh);
+    CommuterPackage(int _id, int _rank, int _type, int _currentRank, double _safety, double _thresh, bool _Transtype);
 	
     /* For archive packaging */
     template<class Archive>
@@ -63,6 +66,7 @@ public:
         ar & currentRank;
         ar & safety;
         ar & thresh;
+	ar & Transtype;
     }
 	
 };

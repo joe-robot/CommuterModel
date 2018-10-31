@@ -2,21 +2,41 @@
 
 #include "Commuter.h"
 
-Commuter::Commuter(repast::AgentId id): id_(id), safety(repast::Random::instance()->nextDouble()), thresh(((repast::Random::instance()->nextDouble())/2)+0.5){ }
+Commuter::Commuter(repast::AgentId id): id_(id), safety(repast::Random::instance()->nextDouble()), thresh(((repast::Random::instance()->nextDouble())/2)+0.5)
+{
+	if(repast::Random::instance()->nextDouble()<0.5)
+	{
+		Transtype= 1;
+	} 
+	else
+	{
+		Transtype = 0;
+	}
 
-Commuter::Commuter(repast::AgentId id, double newSafe, double newThresh): id_(id), safety(newSafe), thresh(newThresh){ }
+}
+
+Commuter::Commuter(repast::AgentId id, double newSafe, double newThresh, bool newTranstype): id_(id), safety(newSafe), thresh(newThresh), Transtype(newTranstype){ }
 
 Commuter::~Commuter(){ }
 
 
-void Commuter::set(int currentRank, double newSafe, double newThresh){
+void Commuter::set(int currentRank, double newSafe, double newThresh, bool newTranstype){
     id_.currentRank(currentRank);
     safety     = newSafe;
     thresh = newThresh;
+    Transtype= newTranstype;
 }
 
 bool Commuter::choosetrans(){
-	return thresh<safety;
+	if(thresh<safety)
+	{	
+		Transtype=1;
+	}
+	else
+	{	
+		Transtype=0;
+	}
+	return Transtype;
 }
 
 void Commuter::commute(repast::SharedContext<Commuter>* context){
@@ -36,7 +56,7 @@ void Commuter::commute(repast::SharedContext<Commuter>* context){
         agentToPlay++;
     }
     safety      = (safetyPayoff+safety)/4;
-    if(choosetrans())
+    /*if(choosetrans())
 	{
 		std::cout<<"Look ma I'm cycling" << id_ <<std::endl;
 		
@@ -44,7 +64,7 @@ void Commuter::commute(repast::SharedContext<Commuter>* context){
 	else
 	{
 	std::cout<<"What is cycle ??? " << id_ <<std::endl;
-	}
+	}*/
 	
 }
 
@@ -53,5 +73,5 @@ void Commuter::commute(repast::SharedContext<Commuter>* context){
 
 CommuterPackage::CommuterPackage(){ }
 
-CommuterPackage::CommuterPackage(int _id, int _rank, int _type, int _currentRank, double _safety, double _thresh):
-id(_id), rank(_rank), type(_type), currentRank(_currentRank), safety(_safety), thresh(_thresh){ }
+CommuterPackage::CommuterPackage(int _id, int _rank, int _type, int _currentRank, double _safety, double _thresh, bool _Transtype):
+id(_id), rank(_rank), type(_type), currentRank(_currentRank), safety(_safety), thresh(_thresh), Transtype(_Transtype){ }

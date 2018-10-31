@@ -41,6 +41,28 @@ void CommuterModel::doSomething(){
 		(*it)->commute(&context);
 		it++;
     }
+	for(int r=0; r< 4; r++)
+	{
+		for(int i=0; i<countOfAgents;i++)
+		{
+			repast::AgentId toDisplay(i,r,0);
+			Commuter* agent = context.getAgent(toDisplay);
+			if(agent!=0)
+			{	
+				if(agent->getTrans()==1)
+				{
+
+				std::cout << agent->getId() << " is Cycling" <<std::endl;
+				}
+				else
+				{
+					std::cout << agent->getId() << " is Driving" <<std::endl;
+				}
+
+			}
+		}
+
+	}
 }
 
 void CommuterModel::initSchedule(repast::ScheduleRunner& runner){
