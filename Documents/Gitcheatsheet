@@ -1,0 +1,17 @@
+GIT Cheat Sheet
+
+git add .		//ass all files in current directory to git
+
+git remote add origin https://github.com/joe-robot/CommuterModel.git  //add origin of thingy
+
+git pull		//Pull Data from git
+
+git commit -m "edited so model is the only one to output to console"  //add comment of what commit about
+
+git push -u origin master  //push commit to github origin specified earlier
+
+
+		
+
+
+
