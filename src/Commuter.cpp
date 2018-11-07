@@ -69,6 +69,20 @@ void Commuter::commute(repast::SharedContext<Commuter>* context){
 }
 
 
+
+void Commuter::move(repast::SharedDiscreteSpace<Commuter, repast::WrapAroundBorders, repast::SimpleAdder<Commuter> >* space){
+
+    std::vector<int> agentLoc;
+    space->getLocation(id_, agentLoc);
+    std::vector<int> agentNewLoc;
+    agentNewLoc.push_back(agentLoc[0] + (id_.id() < 7 ? -1 : 1));
+    agentNewLoc.push_back(agentLoc[1] + (id_.id() > 3 ? -1 : 1));
+    space->moveTo(id_,agentNewLoc);
+    
+}
+
+
+
 /* Serializable Agent Package Data */
 
 CommuterPackage::CommuterPackage(){ }
