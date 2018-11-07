@@ -17,6 +17,7 @@ CommuterModel::CommuterModel(std::string propsFile, int argc, char** argv, boost
 	countOfAgents = repast::strToInt(props->getProperty("count.of.agents"));
 	initializeRandom(*props, comm);
 	if(repast::RepastProcess::instance()->rank() == 0) props->writeToSVFile("./output/record.csv");
+
 }
 
 CommuterModel::~CommuterModel(){
@@ -41,6 +42,9 @@ void CommuterModel::doSomething(){
 		(*it)->commute(&context);
 		it++;
     }
+	
+	NumCycle=0;
+	NumCar=0;
 	for(int r=0; r< 4; r++)
 	{
 		for(int i=0; i<countOfAgents;i++)
@@ -53,10 +57,12 @@ void CommuterModel::doSomething(){
 				{
 
 				std::cout << agent->getId() << " is Cycling" <<std::endl;
+				NumCycle++;
 				}
 				else
 				{
 					std::cout << agent->getId() << " is Driving" <<std::endl;
+					NumCar++;
 				}
 
 			}
@@ -72,14 +78,14 @@ void CommuterModel::initSchedule(repast::ScheduleRunner& runner){
 }
 
 void CommuterModel::recordResults(){
-	if(repast::RepastProcess::instance()->rank() == 0){
-		props->putProperty("Result","Passed");
 		std::vector<std::string> keyOrder;
+		props->putProperty("NumCycle",NumCycle);
+		props->putProperty("NumCar",NumCar);
 		keyOrder.push_back("RunNumber");
 		keyOrder.push_back("stop.at");
-		keyOrder.push_back("Result");
-		props->writeToSVFile("./output/results.csv", keyOrder);
-    }
+		keyOrder.push_back("NumCycle");
+		keyOrder.push_back("NumCar");
+		props->writeToSVFile("./output/CommutersEnd.csv", keyOrder);
 }
 
 

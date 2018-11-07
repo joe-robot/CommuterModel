@@ -13,6 +13,8 @@
 class CommuterModel{
 	int stopAt;
 	int countOfAgents;
+	int NumCycle;
+	int NumCar;
 	repast::Properties* props;
 	repast::SharedContext<Commuter> context;
 public:

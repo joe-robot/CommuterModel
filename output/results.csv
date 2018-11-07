@@ -1,3 +1,6 @@
-RunNumber,stop.at,Result
-,4,Passed
-,4,Passed
+RunNumber,stop.at,NumCycle
+,4,4.000000
+,4,4.000000
+,4,6.000000
+,4,4.000000
+,4,7.000000
