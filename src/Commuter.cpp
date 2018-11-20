@@ -68,8 +68,8 @@ void Commuter::commute(repast::SharedContext<Commuter>* context, repast:: Shared
         agentToPlay++;
     }
     safety      = (safetyPayoff+safety)/4;
-    /*if(choosetrans())
-	{
+    choosetrans())
+	/*{
 		std::cout<<"Look ma I'm cycling" << id_ <<std::endl;
 		
 	}
