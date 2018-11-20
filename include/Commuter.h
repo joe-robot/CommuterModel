@@ -19,7 +19,7 @@ private:
 	
 public:
     Commuter(repast::AgentId id);
-	
+    Commuter(){}
     Commuter(repast::AgentId id, double newSafe, double newThresh, bool newTranstype);
 	
     ~Commuter();

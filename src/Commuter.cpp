@@ -56,6 +56,7 @@ void Commuter::commute(repast::SharedContext<Commuter>* context, repast:: Shared
 	
     double safetyPayoff     = 0;
     double threshPayoff = 0;
+    double numAgentsPlay=0;
     std::vector<Commuter*>::iterator agentToPlay = agentsToPlay.begin();
     while(agentToPlay != agentsToPlay.end()){
         std::vector<int> otherLoc;
@@ -64,10 +65,10 @@ void Commuter::commute(repast::SharedContext<Commuter>* context, repast:: Shared
         std::cout << " Agent " << id_ << " AT " << center << " PLAYING " << ((*agentToPlay)->getId().currentRank() == id_.currentRank() ? "LOCAL" : "NON-LOCAL") << " AGENT " << (*agentToPlay)->getId() << " AT " << otherPoint << std::endl;
         
         safetyPayoff = safetyPayoff + ((*agentToPlay)->getSafe());
-		
+        numAgentsPlay++;
         agentToPlay++;
     }
-    safety      = (safetyPayoff+safety)/4;
+    safety      = (safetyPayoff+safety)/numAgentsPlay;
     choosetrans())
 	/*{
 		std::cout<<"Look ma I'm cycling" << id_ <<std::endl;

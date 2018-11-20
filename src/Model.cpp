@@ -8,6 +8,7 @@
 #include "repast_hpc/Utilities.h"
 #include "repast_hpc/Properties.h"
 #include "repast_hpc/initialize_random.h"
+#include "repast_hpc/SVDataSetBuilder.h"
 #include "repast_hpc/Point.h"
 
 #include "Model.h"
@@ -52,7 +53,7 @@ CommuterModel::CommuterModel(std::string propsFile, int argc, char** argv, boost
 	if(repast::RepastProcess::instance()->rank() == 0) props->writeToSVFile("./output/record.csv");
 
 	repast::Point<double> origin(-100,-100);
-        repast::Point<double> extent(201, 201);
+        repast::Point<double> extent(200, 200);
     
         repast::GridDimensions gd(origin, extent);
     
@@ -88,14 +89,14 @@ void CommuterModel::init(){
 void CommuterModel::doSomething(){
 	int whichRank=0;
 	std::vector<Commuter*> agents;
-	context.selectAgents(countOfAgents, agents);
+    context.selectAgents(repast::SharedContext<Commuter>::LOCAL, countOfAgents, agents);
 	std::vector<Commuter*>::iterator it = agents.begin();
 	while(it != agents.end()){
 		(*it)->commute(&context, discreteSpace);
 		it++;
     }
-
-	for(int r = 0; r < 4; r++){
+    int r=1;
+//	for(int r = 0; r < 4; r++){
 			for(int i = 0; i < 10; i++){
 				repast::AgentId toDisplay(i, r, 0);
 				Commuter* agent = context.getAgent(toDisplay);
@@ -106,25 +107,18 @@ void CommuterModel::doSomething(){
                                     	std::cout << agent->getId() << " " << agent->getSafe() << " " << agent->getThresh() << " AT " << agentLocation << std::endl;
                                		}
 			}
-	}
+	//}
 
 	it = agents.begin();
         while(it != agents.end()){
 	    (*it)->move(discreteSpace);
 	    it++;
         }
-	discreteSpace->balance();
-	repast::RepastProcess::instance()->synchronizeAgentStatus<Commuter, CommuterPackage, CommuterPackageProvider, CommuterPackageReceiver>(context, *provider, *receiver, *receiver);
-    
-        repast::RepastProcess::instance()->synchronizeProjectionInfo<Commuter, CommuterPackage, CommuterPackageProvider, CommuterPackageReceiver>(context, *provider, *receiver, *receiver);
 
-	repast::RepastProcess::instance()->synchronizeAgentStates<CommuterPackage, CommuterPackageProvider, CommuterPackageReceiver>(*provider, *receiver);
-   
-	
 	NumCycle=0;
 	NumCar=0;
-	for(int r=0; r< 4; r++)
-	{
+	//for(int r=0; r< 4; r++)
+	//{
 		for(int i=0; i<countOfAgents;i++)
 		{
 			repast::AgentId toDisplay(i,r,0);
@@ -146,7 +140,13 @@ void CommuterModel::doSomething(){
 			}
 		}
 
-	}
+	//}
+    discreteSpace->balance();
+    repast::RepastProcess::instance()->synchronizeAgentStatus<Commuter, CommuterPackage, CommuterPackageProvider, CommuterPackageReceiver>(context, *provider, *receiver, *receiver);
+    
+    repast::RepastProcess::instance()->synchronizeProjectionInfo<Commuter, CommuterPackage, CommuterPackageProvider, CommuterPackageReceiver>(context, *provider, *receiver, *receiver);
+    
+    repast::RepastProcess::instance()->synchronizeAgentStates<CommuterPackage, CommuterPackageProvider, CommuterPackageReceiver>(*provider, *receiver);
 }
 
 void CommuterModel::initSchedule(repast::ScheduleRunner& runner){
@@ -167,3 +167,55 @@ void CommuterModel::recordResults(){
 }
 
 
+///Pretty sure i don't need these but trying to figure out why it dosen't work k thanks
+
+void CommuterModel::requestAgents(){
+    int rank = repast::RepastProcess::instance()->rank();
+    int worldSize= repast::RepastProcess::instance()->worldSize();
+    repast::AgentRequest req(rank);
+    for(int i = 0; i < worldSize; i++){                     // For each process
+        if(i != rank){                                      // ... except this one
+            std::vector<Commuter*> agents;
+            context.selectAgents(5, agents);                // Choose 5 local agents randomly
+            for(size_t j = 0; j < agents.size(); j++){
+                repast::AgentId local = agents[j]->getId();          // Transform each local agent's id into a matching non-local one
+                repast::AgentId other(local.id(), i, 0);
+                other.currentRank(i);
+                req.addRequest(other);                      // Add it to the agent request
+            }
+        }
+    }
+    repast::RepastProcess::instance()->requestAgents<Commuter, CommuterPackage, CommuterPackageProvider, CommuterPackageReceiver>(context, req, *provider, *receiver, *receiver);
+}
+
+void CommuterModel::cancelAgentRequests(){
+    int rank = repast::RepastProcess::instance()->rank();
+    if(rank == 0) std::cout << "CANCELING AGENT REQUESTS" << std::endl;
+    repast::AgentRequest req(rank);
+    
+    repast::SharedContext<Commuter>::const_state_aware_iterator non_local_agents_iter  = context.begin(repast::SharedContext<Commuter>::NON_LOCAL);
+    repast::SharedContext<Commuter>::const_state_aware_iterator non_local_agents_end   = context.end(repast::SharedContext<Commuter>::NON_LOCAL);
+    while(non_local_agents_iter != non_local_agents_end){
+        req.addCancellation((*non_local_agents_iter)->getId());
+        non_local_agents_iter++;
+    }
+    repast::RepastProcess::instance()->requestAgents<Commuter, CommuterPackage, CommuterPackageProvider, CommuterPackageReceiver>(context, req, *provider, *receiver, *receiver);
+    
+    std::vector<repast::AgentId> cancellations = req.cancellations();
+    std::vector<repast::AgentId>::iterator idToRemove = cancellations.begin();
+    while(idToRemove != cancellations.end()){
+        context.importedAgentRemoved(*idToRemove);
+        idToRemove++;
+    }
+}
+
+void CommuterModel::removeLocalAgents(){
+    int rank = repast::RepastProcess::instance()->rank();
+    if(rank == 0) std::cout << "REMOVING LOCAL AGENTS" << std::endl;
+    for(int i = 0; i < 5; i++){
+        repast::AgentId id(i, rank, 0);
+        repast::RepastProcess::instance()->agentRemoved(id);
+        context.removeAgent(id);
+    }
+    repast::RepastProcess::instance()->synchronizeAgentStatus<Commuter, CommuterPackage, CommuterPackageProvider, CommuterPackageReceiver>(context, *provider, *receiver, *receiver);
+}

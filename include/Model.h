@@ -60,6 +60,9 @@ public:
 	CommuterModel(std::string propsFile, int argc, char** argv, boost::mpi::communicator* comm);
 	~CommuterModel();
 	void init();
+    void requestAgents();
+    void cancelAgentRequests();
+    void removeLocalAgents();
 	void doSomething();
 	void initSchedule(repast::ScheduleRunner& runner);
 	void recordResults();
