@@ -1,6 +1,8 @@
 /* Demo_01_Agent.cpp */
 
 #include "Commuter.h"
+#include "repast_hpc/Moore2DGridQuery.h"
+#include "repast_hpc/Point.h"
 
 Commuter::Commuter(repast::AgentId id): id_(id), safety(repast::Random::instance()->nextDouble()), thresh(((repast::Random::instance()->nextDouble())/2)+0.5)
 {
@@ -39,8 +41,14 @@ bool Commuter::choosetrans(){
 	return Transtype;
 }
 
-void Commuter::commute(repast::SharedContext<Commuter>* context){
-    std::set<Commuter*> agentsToPlay;
+void Commuter::commute(repast::SharedContext<Commuter>* context, repast:: SharedDiscreteSpace<Commuter, repast::WrapAroundBorders, repast::SimpleAdder<Commuter> >* space){
+    std::vector<Commuter*> agentsToPlay;
+    //std::set<Commuter*> agentsToPlay;
+    std::vector<int> agentLoc;
+    space ->getLocation(id_, agentLoc);
+    repast::Point<int> center(agentLoc);
+    repast::Moore2DGridQuery<Commuter> moore2DQuery(space);
+    moore2DQuery.query(center, 1, false, agentsToPlay)
 	
     agentsToPlay.insert(this); // Prohibit playing against self
 	
@@ -48,9 +56,13 @@ void Commuter::commute(repast::SharedContext<Commuter>* context){
 	
     double safetyPayoff     = 0;
     double threshPayoff = 0;
-    std::set<Commuter*>::iterator agentToPlay = agentsToPlay.begin();
+    std::vector<Commuter*>::iterator agentToPlay = agentsToPlay.begin();
     while(agentToPlay != agentsToPlay.end()){
-      
+        std::vector<int> otherLoc;
+        space->getLocation((*agentToPlay)->getId(), otherLoc);
+        repast::Point<int> otherPoint(otherLoc);
+        std::cout << " Agent " << id_ << " AT " << center << " PLAYING " << ((*agentToPlay)->getId().currentRank() == id_.currentRank() ? "LOCAL" : "NON-LOCAL") << " AGENT " << (*agentToPlay)->getId() << " AT " << otherPoint << std::endl;
+        
         safetyPayoff = safetyPayoff + ((*agentToPlay)->getSafe());
 		
         agentToPlay++;

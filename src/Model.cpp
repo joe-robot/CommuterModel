@@ -69,6 +69,8 @@ CommuterModel::CommuterModel(std::string propsFile, int argc, char** argv, boost
 
 CommuterModel::~CommuterModel(){
 		delete props;
+        delete provider;
+        delete receiver;
 }
 
 void CommuterModel::init(){
@@ -89,7 +91,7 @@ void CommuterModel::doSomething(){
 	context.selectAgents(countOfAgents, agents);
 	std::vector<Commuter*>::iterator it = agents.begin();
 	while(it != agents.end()){
-		(*it)->commute(&context);
+		(*it)->commute(&context, discreteSpace);
 		it++;
     }
 
