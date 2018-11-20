@@ -48,11 +48,11 @@ void Commuter::commute(repast::SharedContext<Commuter>* context, repast:: Shared
     space ->getLocation(id_, agentLoc);
     repast::Point<int> center(agentLoc);
     repast::Moore2DGridQuery<Commuter> moore2DQuery(space);
-    moore2DQuery.query(center, 1, false, agentsToPlay)
+    moore2DQuery.query(center, 1, false, agentsToPlay);
 	
-    agentsToPlay.insert(this); // Prohibit playing against self
+    //agentsToPlay.insert(this); // Prohibit playing against self
 	
-    context->selectAgents(3, agentsToPlay, true);
+    //context->selectAgents(3, agentsToPlay, true);
 	
     double safetyPayoff     = 0;
     double threshPayoff = 0;
