@@ -1,7 +1,7 @@
-/* Demo_01_Agent.h */
+/* Demo_03_Agent.h */
 
-#ifndef DEMO_01_AGENT
-#define DEMO_01_AGENT
+#ifndef COMMUTER
+#define COMMUTER
 
 #include "repast_hpc/AgentId.h"
 #include "repast_hpc/SharedContext.h"
@@ -13,14 +13,13 @@ class Commuter{
 	
 private:
     repast::AgentId   id_;
-    double              safety;
-    double          thresh;
-    bool	Transtype;
+    double              c;
+    double          total;
 	
 public:
     Commuter(repast::AgentId id);
-    Commuter(){}
-    Commuter(repast::AgentId id, double newSafe, double newThresh, bool newTranstype);
+	Commuter(){}
+    Commuter(repast::AgentId id, double newC, double newTotal);
 	
     ~Commuter();
 	
@@ -29,18 +28,18 @@ public:
     virtual const repast::AgentId& getId() const {      return id_;    }
 	
     /* Getters specific to this kind of Agent */
-    double getSafe(){                                      return safety;      }
-    double getThresh(){                                  return thresh;  }
-    bool getTrans(){					return Transtype; }
+    double getC(){                                      return c;      }
+    double getTotal(){                                  return total;  }
 	
     /* Setter */
-    void set(int currentRank, double newSafe, double newThresh, bool newTranstype);
+    void set(int currentRank, double newC, double newTotal);
 	
     /* Actions */
-    bool choosetrans();                                                 // Will decide trans method
-    void commute(repast::SharedContext<Commuter>* context, repast::SharedDiscreteSpace<Commuter, repast::WrapAroundBorders, repast::SimpleAdder<Commuter> >* space);    // Choose three other agents from the given context and see if they cooperate or not
+    bool cooperate();                                                 // Will indicate whether the agent cooperates or not; probability determined by = c / total
+    void play(repast::SharedContext<Commuter>* context,
+              repast::SharedDiscreteSpace<Commuter, repast::WrapAroundBorders, repast::SimpleAdder<Commuter> >* space);    // Choose three other agents from the given context and see if they cooperate or not
     void move(repast::SharedDiscreteSpace<Commuter, repast::WrapAroundBorders, repast::SimpleAdder<Commuter> >* space);
-	
+    
 };
 
 /* Serializable Agent Package */
@@ -51,13 +50,12 @@ public:
     int    rank;
     int    type;
     int    currentRank;
-    double safety;
-    double thresh;
-    bool  Transtype;
+    double c;
+    double total;
 	
     /* Constructors */
     CommuterPackage(); // For serialization
-    CommuterPackage(int _id, int _rank, int _type, int _currentRank, double _safety, double _thresh, bool _Transtype);
+    CommuterPackage(int _id, int _rank, int _type, int _currentRank, double _c, double _total);
 	
     /* For archive packaging */
     template<class Archive>
@@ -66,9 +64,8 @@ public:
         ar & rank;
         ar & type;
         ar & currentRank;
-        ar & safety;
-        ar & thresh;
-	ar & Transtype;
+        ar & c;
+        ar & total;
     }
 	
 };

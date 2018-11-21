@@ -5,7 +5,7 @@
 #
 #*******************************
 
-MPICXX=/home/rtsl/sfw/MPICH/bin/mpicxx -std=c++11 
+MPICXX=/home/rtsl/sfw/MPICH/bin/mpicxx -std=c++11 -g
 
 BOOST_INCLUDE=-I/home/rtsl/sfw/Boost/Boost_1.61/include/
 BOOST_LIB_DIR=-L/home/rtsl/sfw/Boost/Boost_1.61/lib/

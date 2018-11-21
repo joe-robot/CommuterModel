@@ -35,10 +35,10 @@ clean: clean_compiled_files clean_output_files remove_subdirectories
 
 .PHONY: CommuterModel
 CommuterModel: clean_compiled_files
-	$(MPICXX) $(REPAST_HPC_DEFINES) $(BOOST_INCLUDE) $(REPAST_HPC_INCLUDE) -I./include -c ./src/main.cpp -o ./objects/main.o
-	$(MPICXX) $(REPAST_HPC_DEFINES) $(BOOST_INCLUDE) $(REPAST_HPC_INCLUDE) -I./include -c ./src/Model.cpp -o ./objects/Model.o
+	$(MPICXX) $(REPAST_HPC_DEFINES) $(BOOST_INCLUDE) $(REPAST_HPC_INCLUDE) -I./include -c ./src/Main.cpp -o ./objects/Main.o
+	$(MPICXX) $(REPAST_HPC_DEFINES) $(BOOST_INCLUDE) $(REPAST_HPC_INCLUDE) -I./include -c ./src/CommuterModel.cpp -o ./objects/CommuterModel.o
 	$(MPICXX) $(REPAST_HPC_DEFINES) $(BOOST_INCLUDE) $(REPAST_HPC_INCLUDE) -I./include -c ./src/Commuter.cpp -o ./objects/Commuter.o
-	$(MPICXX) $(BOOST_LIB_DIR) $(REPAST_HPC_LIB_DIR) -o ./bin/CommuterModel.exe  ./objects/main.o ./objects/Model.o ./objects/Commuter.o $(REPAST_HPC_LIB) $(BOOST_LIBS)
+	$(MPICXX) $(BOOST_LIB_DIR) $(REPAST_HPC_LIB_DIR) -o ./bin/CommuterModel.exe  ./objects/Main.o ./objects/CommuterModel.o ./objects/Commuter.o $(REPAST_HPC_LIB) $(BOOST_LIBS)
 
 
 

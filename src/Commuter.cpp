@@ -1,87 +1,59 @@
-/* Demo_01_Agent.cpp */
+/* Demo_03_Agent.cpp */
 
 #include "Commuter.h"
 #include "repast_hpc/Moore2DGridQuery.h"
 #include "repast_hpc/Point.h"
 
-Commuter::Commuter(repast::AgentId id): id_(id), safety(repast::Random::instance()->nextDouble()), thresh(((repast::Random::instance()->nextDouble())/2)+0.5)
-{
-	if(repast::Random::instance()->nextDouble()<0.5)
-	{
-		Transtype= 1;
-	} 
-	else
-	{
-		Transtype = 0;
-	}
+Commuter::Commuter(repast::AgentId id): id_(id), c(100), total(200){ }
 
-}
-
-Commuter::Commuter(repast::AgentId id, double newSafe, double newThresh, bool newTranstype): id_(id), safety(newSafe), thresh(newThresh), Transtype(newTranstype){ }
+Commuter::Commuter(repast::AgentId id, double newC, double newTotal): id_(id), c(newC), total(newTotal){ }
 
 Commuter::~Commuter(){ }
 
 
-void Commuter::set(int currentRank, double newSafe, double newThresh, bool newTranstype){
+void Commuter::set(int currentRank, double newC, double newTotal){
     id_.currentRank(currentRank);
-    safety     = newSafe;
-    thresh = newThresh;
-    Transtype= newTranstype;
+    c     = newC;
+    total = newTotal;
 }
 
-bool Commuter::choosetrans(){
-	if(thresh<safety)
-	{	
-		Transtype=1;
-	}
-	else
-	{	
-		Transtype=0;
-	}
-	return Transtype;
+bool Commuter::cooperate(){
+	return repast::Random::instance()->nextDouble() < c/total;
 }
 
-void Commuter::commute(repast::SharedContext<Commuter>* context, repast:: SharedDiscreteSpace<Commuter, repast::WrapAroundBorders, repast::SimpleAdder<Commuter> >* space){
+void Commuter::play(repast::SharedContext<Commuter>* context,
+                              repast::SharedDiscreteSpace<Commuter, repast::WrapAroundBorders, repast::SimpleAdder<Commuter> >* space){
     std::vector<Commuter*> agentsToPlay;
-    //std::set<Commuter*> agentsToPlay;
+    
     std::vector<int> agentLoc;
-    space ->getLocation(id_, agentLoc);
+    space->getLocation(id_, agentLoc);
     repast::Point<int> center(agentLoc);
     repast::Moore2DGridQuery<Commuter> moore2DQuery(space);
     moore2DQuery.query(center, 1, false, agentsToPlay);
-	
-    //agentsToPlay.insert(this); // Prohibit playing against self
-	
-    //context->selectAgents(3, agentsToPlay, true);
-	
-    double safetyPayoff     = 0;
-    double threshPayoff = 0;
-    double numAgentsPlay=0;
+    
+    
+    double cPayoff     = 0;
+    double totalPayoff = 0;
     std::vector<Commuter*>::iterator agentToPlay = agentsToPlay.begin();
     while(agentToPlay != agentsToPlay.end()){
         std::vector<int> otherLoc;
         space->getLocation((*agentToPlay)->getId(), otherLoc);
         repast::Point<int> otherPoint(otherLoc);
-        std::cout << " Agent " << id_ << " AT " << center << " PLAYING " << ((*agentToPlay)->getId().currentRank() == id_.currentRank() ? "LOCAL" : "NON-LOCAL") << " AGENT " << (*agentToPlay)->getId() << " AT " << otherPoint << std::endl;
-        
-        safetyPayoff = safetyPayoff + ((*agentToPlay)->getSafe());
-        numAgentsPlay++;
+        std::cout << " AGENT " << id_ << " AT " << center << " PLAYING " << ((*agentToPlay)->getId().currentRank()) << (*agentToPlay)->getId() << " AT " << otherPoint << std::endl;
+
+        bool iCooperated = cooperate();                          // Do I cooperate?
+        double payoff = (iCooperated ?
+						 ((*agentToPlay)->cooperate() ?  7 : 1) :     // If I cooperated, did my opponent?
+						 ((*agentToPlay)->cooperate() ? 10 : 3));     // If I didn't cooperate, did my opponent?
+        if(iCooperated) cPayoff += payoff;
+        totalPayoff             += payoff;
+		
         agentToPlay++;
     }
-    safety      = (safetyPayoff+safety)/numAgentsPlay;
-    choosetrans())
-	/*{
-		std::cout<<"Look ma I'm cycling" << id_ <<std::endl;
-		
-	}
-	else
-	{
-	std::cout<<"What is cycle ??? " << id_ <<std::endl;
-	}*/
+    c      += cPayoff;
+    total  += totalPayoff;
 	
 }
-
-
 
 void Commuter::move(repast::SharedDiscreteSpace<Commuter, repast::WrapAroundBorders, repast::SimpleAdder<Commuter> >* space){
 
@@ -96,9 +68,3 @@ void Commuter::move(repast::SharedDiscreteSpace<Commuter, repast::WrapAroundBord
 
 
 
-/* Serializable Agent Package Data */
-
-CommuterPackage::CommuterPackage(){ }
-
-CommuterPackage::CommuterPackage(int _id, int _rank, int _type, int _currentRank, double _safety, double _thresh, bool _Transtype):
-id(_id), rank(_rank), type(_type), currentRank(_currentRank), safety(_safety), thresh(_thresh), Transtype(_Transtype){ }
