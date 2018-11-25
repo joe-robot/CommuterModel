@@ -13,13 +13,15 @@ class Commuter{
 	
 private:
     repast::AgentId   id_;
-    double              c;
-    double          total;
+    double              safety;
+    double          thresh;
+    int             transtype;
+    
 	
 public:
     Commuter(repast::AgentId id);
 	Commuter(){}
-    Commuter(repast::AgentId id, double newC, double newTotal);
+    Commuter(repast::AgentId id, double newSafe, double newThresh, int newTranstype);
 	
     ~Commuter();
 	
@@ -28,21 +30,23 @@ public:
     virtual const repast::AgentId& getId() const {      return id_;    }
 	
     /* Getters specific to this kind of Agent */
-    double getC(){                                      return c;      }
-    double getTotal(){                                  return total;  }
+    double getSafe(){                                      return safety;  }
+    double getThresh(){                                  return thresh;  }
+    int getTrans(){                                  return transtype;  }
 	
     /* Setter */
-    void set(int currentRank, double newC, double newTotal);
+    void set(int currentRank, double newSafe, double newThresh, int newTranstype);
 	
     /* Actions */
-    bool cooperate();                                                 // Will indicate whether the agent cooperates or not; probability determined by = c / total
-    void play(repast::SharedContext<Commuter>* context,
+    int chooseTrans();
+    // Will indicate whether the agent cooperates or not; probability determined by = c / total
+    void commute(repast::SharedContext<Commuter>* context,
               repast::SharedDiscreteSpace<Commuter, repast::WrapAroundBorders, repast::SimpleAdder<Commuter> >* space);    // Choose three other agents from the given context and see if they cooperate or not
     void move(repast::SharedDiscreteSpace<Commuter, repast::WrapAroundBorders, repast::SimpleAdder<Commuter> >* space);
     
 };
 
-/* Serializable Agent Package */
+/* //Serializable Agent Package
 struct CommuterPackage {
 	
 public:
@@ -53,11 +57,11 @@ public:
     double c;
     double total;
 	
-    /* Constructors */
+    //Constructors
     CommuterPackage(); // For serialization
     CommuterPackage(int _id, int _rank, int _type, int _currentRank, double _c, double _total);
 	
-    /* For archive packaging */
+    //For archive packaging
     template<class Archive>
     void serialize(Archive &ar, const unsigned int version){
         ar & id;
@@ -70,5 +74,6 @@ public:
 	
 };
 
-
+*/
 #endif
+

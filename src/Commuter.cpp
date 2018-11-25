@@ -4,56 +4,70 @@
 #include "repast_hpc/Moore2DGridQuery.h"
 #include "repast_hpc/Point.h"
 
-Commuter::Commuter(repast::AgentId id): id_(id), c(100), total(200){ }
+Commuter::Commuter(repast::AgentId id): id_(id), safety(repast::Random::instance()->nextDouble()), thresh(((repast::Random::instance()->nextDouble())/2)+0.5)
+{
+    if(repast::Random::instance()->nextDouble()<0.5)
+    {
+        Transtype= 1;
+    }
+    else
+    {
+        Transtype = 0;
+    }
+    
+}
 
-Commuter::Commuter(repast::AgentId id, double newC, double newTotal): id_(id), c(newC), total(newTotal){ }
+Commuter::Commuter(repast::AgentId id, double newSafe, double newThresh, int newTranstype): id_(id), safety(newSafe), thresh(newThresh), Transtype(newTranstype){ }
 
 Commuter::~Commuter(){ }
 
 
-void Commuter::set(int currentRank, double newC, double newTotal){
+void Commuter::set(int currentRank, double newSafe, double newThresh, int newTranstype){
     id_.currentRank(currentRank);
-    c     = newC;
-    total = newTotal;
+    safety     = newSafe;
+    thresh = newThresh;
+    Transtype= newTranstype;
 }
 
-bool Commuter::cooperate(){
-	return repast::Random::instance()->nextDouble() < c/total;
+int Commuter::choosetrans(){
+    if(thresh<safety)
+    {
+        Transtype=1;
+    }
+    else
+    {
+        Transtype=0;
+    }
+    return Transtype;
 }
 
-void Commuter::play(repast::SharedContext<Commuter>* context,
-                              repast::SharedDiscreteSpace<Commuter, repast::WrapAroundBorders, repast::SimpleAdder<Commuter> >* space){
+oid Commuter::commute(repast::SharedContext<Commuter>* context, repast:: SharedDiscreteSpace<Commuter, repast::WrapAroundBorders, repast::SimpleAdder<Commuter> >* space){
     std::vector<Commuter*> agentsToPlay;
-    
     std::vector<int> agentLoc;
-    space->getLocation(id_, agentLoc);
+    space ->getLocation(id_, agentLoc);
     repast::Point<int> center(agentLoc);
     repast::Moore2DGridQuery<Commuter> moore2DQuery(space);
     moore2DQuery.query(center, 1, false, agentsToPlay);
     
-    
-    double cPayoff     = 0;
-    double totalPayoff = 0;
+    double safetyPayoff     = 0;
+    double threshPayoff = 0;
+    double numAgentsPlay=0;
     std::vector<Commuter*>::iterator agentToPlay = agentsToPlay.begin();
     while(agentToPlay != agentsToPlay.end()){
         std::vector<int> otherLoc;
         space->getLocation((*agentToPlay)->getId(), otherLoc);
         repast::Point<int> otherPoint(otherLoc);
-        std::cout << " AGENT " << id_ << " AT " << center << " PLAYING " << ((*agentToPlay)->getId().currentRank()) << (*agentToPlay)->getId() << " AT " << otherPoint << std::endl;
-
-        bool iCooperated = cooperate();                          // Do I cooperate?
-        double payoff = (iCooperated ?
-						 ((*agentToPlay)->cooperate() ?  7 : 1) :     // If I cooperated, did my opponent?
-						 ((*agentToPlay)->cooperate() ? 10 : 3));     // If I didn't cooperate, did my opponent?
-        if(iCooperated) cPayoff += payoff;
-        totalPayoff             += payoff;
-		
+        std::cout << " Agent " << id_ << " AT " << center << " PLAYING " << ((*agentToPlay)->getId().currentRank() == id_.currentRank() ? "LOCAL" : "NON-LOCAL") << " AGENT " << (*agentToPlay)->getId() << " AT " << otherPoint << std::endl;
+        
+        safetyPayoff = safetyPayoff + ((*agentToPlay)->getSafe());
+        numAgentsPlay++;
         agentToPlay++;
     }
-    c      += cPayoff;
-    total  += totalPayoff;
-	
+    safety      = (safetyPayoff+safety)/numAgentsPlay;
+    choosetrans();
+    
 }
+
 
 void Commuter::move(repast::SharedDiscreteSpace<Commuter, repast::WrapAroundBorders, repast::SimpleAdder<Commuter> >* space){
 

@@ -15,67 +15,12 @@
 
 #include "Commuter.h"
 
-/* Agent Package Provider */
-class CommuterPackageProvider {
-	
-private:
-    repast::SharedContext<Commuter>* agents;
-	
-public:
-	
-    CommuterPackageProvider(repast::SharedContext<Commuter>* agentPtr);
-	
-    void providePackage(Commuter * agent, std::vector<CommuterPackage>& out);
-	
-    void provideContent(repast::AgentRequest req, std::vector<CommuterPackage>& out);
-	
-};
-
-/* Agent Package Receiver */
-class CommuterPackageReceiver {
-	
-private:
-    repast::SharedContext<Commuter>* agents;
-	
-public:
-	
-    CommuterPackageReceiver(repast::SharedContext<Commuter>* agentPtr);
-	
-    Commuter * createAgent(CommuterPackage package);
-	
-    void updateAgent(CommuterPackage package);
-	
-};
-
-
-/* Data Collection */
-class DataSource_AgentTotals : public repast::TDataSource<int>{
-private:
-	repast::SharedContext<Commuter>* context;
-
-public:
-	DataSource_AgentTotals(repast::SharedContext<Commuter>* c);
-	int getData();
-};
-	
-
-class DataSource_AgentCTotals : public repast::TDataSource<int>{
-private:
-	repast::SharedContext<Commuter>* context;
-	
-public:
-	DataSource_AgentCTotals(repast::SharedContext<Commuter>* c);
-	int getData();
-};
 
 class CommuterModel{
 	int stopAt;
 	int countOfAgents;
 	repast::Properties* props;
 	repast::SharedContext<Commuter> context;
-	
-	CommuterPackageProvider* provider;
-	CommuterPackageReceiver* receiver;
 
 	repast::SVDataSet* agentValues;
     repast::SharedDiscreteSpace<Commuter, repast::WrapAroundBorders, repast::SimpleAdder<Commuter> >* discreteSpace;

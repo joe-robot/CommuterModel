@@ -99,7 +99,7 @@ void CommuterModel::doSomething(){
 	context.selectAgents(repast::SharedContext<Commuter>::LOCAL, countOfAgents, agents);
 	std::vector<Commuter*>::iterator it = agents.begin();
 	while(it != agents.end()){
-        (*it)->play(&context, discreteSpace);
+        (*it)->commute(&context, discreteSpace);
 		it++;
     }
 
