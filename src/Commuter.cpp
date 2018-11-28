@@ -41,7 +41,7 @@ int Commuter::choosetrans(){
     return Transtype;
 }
 
-void Commuter::commute(repast::SharedContext<Commuter>* context, repast:: SharedDiscreteSpace<Commuter, repast::WrapAroundBorders, repast::SimpleAdder<Commuter> >* space){
+void Commuter::commute(double Gsafety,repast::SharedContext<Commuter>* context, repast:: SharedDiscreteSpace<Commuter, repast::WrapAroundBorders, repast::SimpleAdder<Commuter> >* space){
     std::vector<Commuter*> agentsToPlay;
     std::vector<int> agentLoc;
     space ->getLocation(id_, agentLoc);
@@ -63,7 +63,17 @@ void Commuter::commute(repast::SharedContext<Commuter>* context, repast:: Shared
         numAgentsPlay++;
         agentToPlay++;
     }
-    safety      = (safetyPayoff+safety)/numAgentsPlay;
+	std::cout <<"Hey old safety "<< id_ << " is " << safety;
+	if(numAgentsPlay!=0)
+	{
+    safety      = (safety+((safetyPayoff/numAgentsPlay)/2)+(Gsafety/2))/(2);
+	}
+	else
+	{
+		safety      = (safety+(Gsafety/2))/(1.5);
+	}
+	 std::cout <<"and my new is " << safety << " my threshold is " << thresh  << std::endl;
+	std::cout<<"Global safety is " << Gsafety << std::endl;
     choosetrans();
     
 }

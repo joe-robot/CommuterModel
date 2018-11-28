@@ -40,7 +40,7 @@ public:
     /* Actions */
     int choosetrans();
     // Will indicate whether the agent cooperates or not; probability determined by = c / total
-    void commute(repast::SharedContext<Commuter>* context,
+    void commute(double Gsafety,repast::SharedContext<Commuter>* context,
               repast::SharedDiscreteSpace<Commuter, repast::WrapAroundBorders, repast::SimpleAdder<Commuter> >* space);    // Choose three other agents from the given context and see if they cooperate or not
     void move(repast::SharedDiscreteSpace<Commuter, repast::WrapAroundBorders, repast::SimpleAdder<Commuter> >* space);
     

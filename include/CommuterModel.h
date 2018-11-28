@@ -20,10 +20,13 @@ class CommuterModel{
 	int stopAt;
 	int countOfAgents;
 	int timeinsteps;
+	double Gsafety;
 	repast::Properties* props;
 	repast::SharedContext<Commuter> context;
 
 	repast::SVDataSet* agentValues;
+
+
     repast::SharedDiscreteSpace<Commuter, repast::WrapAroundBorders, repast::SimpleAdder<Commuter> >* discreteSpace;
 	
 public:
@@ -37,5 +40,28 @@ public:
 	void initSchedule(repast::ScheduleRunner& runner);
 	void recordResults();
 };
+
+
+/* Data Collection */
+class DataSource_AgentTotalCars : public repast::TDataSource<int>{
+private:
+	repast::SharedContext<Commuter>* context;
+    
+public:
+	DataSource_AgentTotalCars(repast::SharedContext<Commuter>* car);
+	int getData();
+};
+
+
+class DataSource_AgentTotalBikes : public repast::TDataSource<int>{
+private:
+	repast::SharedContext<Commuter>* context;
+	
+public:
+	DataSource_AgentTotalBikes(repast::SharedContext<Commuter>* bike);
+	int getData();
+};
+
+
 
 #endif
