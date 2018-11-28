@@ -15,7 +15,7 @@ private:
     repast::AgentId   id_;
     double              safety;
     double          thresh;
-    int             transtype;
+    int             Transtype;
     
 	
 public:
@@ -32,13 +32,13 @@ public:
     /* Getters specific to this kind of Agent */
     double getSafe(){                                      return safety;  }
     double getThresh(){                                  return thresh;  }
-    int getTrans(){                                  return transtype;  }
+    int getTrans(){                                  return Transtype;  }
 	
     /* Setter */
     void set(int currentRank, double newSafe, double newThresh, int newTranstype);
 	
     /* Actions */
-    int chooseTrans();
+    int choosetrans();
     // Will indicate whether the agent cooperates or not; probability determined by = c / total
     void commute(repast::SharedContext<Commuter>* context,
               repast::SharedDiscreteSpace<Commuter, repast::WrapAroundBorders, repast::SimpleAdder<Commuter> >* space);    // Choose three other agents from the given context and see if they cooperate or not

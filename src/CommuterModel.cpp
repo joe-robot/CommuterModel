@@ -47,6 +47,7 @@ CommuterModel::~CommuterModel(){
 
 void CommuterModel::init(){
 	int rank = repast::RepastProcess::instance()->rank();
+	timeinsteps=0;
 	for(int i = 0; i < countOfAgents; i++){
         repast::Point<int> initialLocation((int)discreteSpace->dimensions().origin().getX() + i,(int)discreteSpace->dimensions().origin().getY() + i);
 		repast::AgentId id(i, rank, 0);
@@ -60,41 +61,8 @@ void CommuterModel::init(){
 
 
 void CommuterModel::doSomething(){
-	/*int whichRank = 0;
-	if(repast::RepastProcess::instance()->rank() == whichRank) std::cout << " TICK " << repast::RepastProcess::instance()->getScheduleRunner().currentTick() << std::endl;
-
-	if(repast::RepastProcess::instance()->rank() == whichRank){
-		std::cout << "LOCAL AGENTS:" << std::endl;
-		for(int r = 0; r < 4; r++){
-			for(int i = 0; i < 10; i++){
-				repast::AgentId toDisplay(i, r, 0);
-				Commuter* agent = context.getAgent(toDisplay);
-				if((agent != 0) && (agent->getId().currentRank() == whichRank)){
-                    std::vector<int> agentLoc;
-                    discreteSpace->getLocation(agent->getId(), agentLoc);
-                    repast::Point<int> agentLocation(agentLoc);
-                    std::cout << agent->getId() << " " << agent->getC() << " " << agent->getTotal() << " AT " << agentLocation << std::endl;
-                }
-			}
-		}
-		
-		std::cout << "NON LOCAL AGENTS:" << std::endl;
-		for(int r = 0; r < 4; r++){
-			for(int i = 0; i < 10; i++){
-				repast::AgentId toDisplay(i, r, 0);
-				Commuter* agent = context.getAgent(toDisplay);
-				if((agent != 0) && (agent->getId().currentRank() != whichRank)){
-                    std::vector<int> agentLoc;
-                    discreteSpace->getLocation(agent->getId(), agentLoc);
-                    repast::Point<int> agentLocation(agentLoc);
-                    std::cout << agent->getId() << " " << agent->getC() << " " << agent->getTotal() << " AT " << agentLocation << std::endl;
-                }
-			}
-		}
-	}*/
-
-	
-	
+	timeinsteps++;
+	int Transtype;	
 	std::vector<Commuter*> agents;
 	context.selectAgents(repast::SharedContext<Commuter>::LOCAL, countOfAgents, agents);
 	std::vector<Commuter*>::iterator it = agents.begin();
@@ -102,6 +70,21 @@ void CommuterModel::doSomething(){
         (*it)->commute(&context, discreteSpace);
 		it++;
     }
+
+ 	it = agents.begin();
+    while(it != agents.end()){
+		Transtype= (*it)->getTrans();
+		if(Transtype ==1)
+		{
+			std::cout<<"just another cyle boi " << (*it)->getId() << " at "<< timeinsteps << std::endl;
+		}
+		else
+		{
+			std::cout<<"just another drivey man" << std::endl;
+		}
+		it++;
+    }
+
 
     it = agents.begin();
     while(it != agents.end()){
@@ -115,7 +98,7 @@ void CommuterModel::doSomething(){
 
 void CommuterModel::initSchedule(repast::ScheduleRunner& runner){
 
-	runner.scheduleEvent(2, 1, repast::Schedule::FunctorPtr(new repast::MethodFunctor<CommuterModel> (this, &CommuterModel::doSomething)));
+	runner.scheduleEvent(1, 1, repast::Schedule::FunctorPtr(new repast::MethodFunctor<CommuterModel> (this, &CommuterModel::doSomething)));
 
 	runner.scheduleStop(stopAt);
 

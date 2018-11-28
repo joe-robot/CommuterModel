@@ -41,7 +41,7 @@ int Commuter::choosetrans(){
     return Transtype;
 }
 
-oid Commuter::commute(repast::SharedContext<Commuter>* context, repast:: SharedDiscreteSpace<Commuter, repast::WrapAroundBorders, repast::SimpleAdder<Commuter> >* space){
+void Commuter::commute(repast::SharedContext<Commuter>* context, repast:: SharedDiscreteSpace<Commuter, repast::WrapAroundBorders, repast::SimpleAdder<Commuter> >* space){
     std::vector<Commuter*> agentsToPlay;
     std::vector<int> agentLoc;
     space ->getLocation(id_, agentLoc);
