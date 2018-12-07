@@ -13,15 +13,15 @@
 
 #include "CommuterModel.h"
 
-CommuterModel::CommuterModel(std::string propsFile, int argc, char** argv, boost::mpi::communicator* comm): context(comm){
+CommuterModel::CommuterModel(std::string propsFile, int argc, char** argv, boost::mpi::communicator* comm): context(comm),Infcontext(comm) {
 	props = new repast::Properties(propsFile, argc, argv, comm);
 	stopAt = repast::strToInt(props->getProperty("stop.at"));
 	countOfAgents = repast::strToInt(props->getProperty("count.of.agents"));
+	countOfInfAgents = repast::strToInt(props->getProperty("count.of.infrastructure.agents"));
 	initializeRandom(*props, comm);
 	Gsafety=0;
-	
     repast::Point<double> origin(-100,-100);
-    repast::Point<double> extent(200, 200);
+    repast::Point<double> extent(201, 201);
     
     repast::GridDimensions gd(origin, extent);
     
@@ -31,10 +31,13 @@ CommuterModel::CommuterModel(std::string propsFile, int argc, char** argv, boost
     processDims.push_back(1);
     
     discreteSpace = new repast::SharedDiscreteSpace<Commuter, repast::WrapAroundBorders, repast::SimpleAdder<Commuter> >("AgentDiscreteSpace", gd, processDims, 2, comm);
+    
+    discreteInfSpace = new repast::SharedDiscreteSpace<Infrastructure, repast::WrapAroundBorders, repast::SimpleAdder<Infrastructure> >("AgentDiscreteSpace", gd, processDims, 2, comm);
 	
-    std::cout << "RANK " << repast::RepastProcess::instance()->rank() << " BOUNDS: " << discreteSpace->bounds().origin() << " " << discreteSpace->bounds().extents() << std::endl;
+   // std::cout << "RANK " << repast::RepastProcess::instance()->rank() << " BOUNDS: " << discreteSpace->bounds().origin() << " " << discreteSpace->bounds().extents() << std::endl;
     
    	context.addProjection(discreteSpace);
+    	Infcontext.addProjection(discreteInfSpace);
      	// Data collection
 	// Create the data set builder
 	std::string fileOutputName("./output/EndSimCommuterData.csv");
@@ -62,13 +65,22 @@ CommuterModel::~CommuterModel(){
 void CommuterModel::init(){
 	int rank = repast::RepastProcess::instance()->rank();
 	timeinsteps=0;
-	for(int i = 0; i < countOfAgents; i++){
-        repast::Point<int> initialLocation((int)discreteSpace->dimensions().origin().getX() + i,(int)discreteSpace->dimensions().origin().getY() + i);
+	for(int i = 0; i < countOfAgents; i++){ 
+        repast::Point<int> initialLocation(0 + i,0+ i);
 		repast::AgentId id(i, rank, 0);
 		id.currentRank(rank);
 		Commuter* agent = new Commuter(id);
 		context.addAgent(agent);
         discreteSpace->moveTo(id, initialLocation);
+	}
+
+	for(int i = 0; i < countOfInfAgents; i++){ //<--need similar for infrastructure
+        repast::Point<int> initialLocation(0,0);
+		repast::AgentId id(i, rank, 1);
+		id.currentRank(rank);
+		Infrastructure* agent = new Infrastructure(id,1,1,0.5);
+		Infcontext.addAgent(agent);
+        discreteInfSpace->moveTo(id, initialLocation);
 	}
 }
 
@@ -94,21 +106,21 @@ void CommuterModel::doSomething(){
 
 
 	it = agents.begin();
-	while(it != agents.end()){
-        (*it)->commute(Gsafety,&context, discreteSpace);
+	while(it != agents.end()){ //Need similar in the commuter class for using Infrastructure
+        (*it)->commute(Gsafety,&context, discreteSpace, discreteInfSpace);
 		it++;
     }
 
  	it = agents.begin();
-    while(it != agents.end()){
+    while(it != agents.end()){  //Need similar for recivieing infrastructure information
 		Transtype= (*it)->getTrans();
 		if(Transtype ==1)
 		{
-			std::cout<<"just another cyleist " << (*it)->getId() << " at "<< timeinsteps << std::endl;
+			//std::cout<<"just another cyleist " << (*it)->getId() << " at "<< timeinsteps << std::endl;
 		}
 		else
 		{
-			std::cout<<"just another driver" << std::endl;
+			//std::cout<<"just another driver" << std::endl;
 		}
 		it++;
     }

@@ -12,16 +12,16 @@
 class Infrastructure{
 	
 private:
-    repast::AgentId   id_;
-    double              safety;
-    double          thresh;
-    int             Transtype;
+    repast::AgentId  	id_;
+    int             	Capacity;
+    int         	Reach;
+    double           	ProvSafety;
     
 	
 public:
-    Infrastructure(repast::AgentId id);
+    //Infrastructure(repast::AgentId id);
 	Infrastructure(){}
-    Infrastructure(repast::AgentId id, double newSafe, double newThresh, int newTranstype);
+    Infrastructure(repast::AgentId id, int newCap, int newReach, double newPSafe);
 	
     ~Infrastructure();
 	
@@ -30,19 +30,16 @@ public:
     virtual const repast::AgentId& getId() const {      return id_;    }
 	
     /* Getters specific to this kind of Agent */
-    double getSafe(){                                      return safety;  }
-    double getThresh(){                                  return thresh;  }
-    int getTrans(){                                  return Transtype;  }
+    int getCapacity(){                               return Capacity;  }
+    int getReach(){                                  return Reach;  }
+    double getProvSafety(){                          return ProvSafety;  }
 	
     /* Setter */
-    void set(int currentRank, double newSafe, double newThresh, int newTranstype);
+    void set(int currentRank, int newCap, int newReach, double newPSafe);
 	
     /* Actions */
-    int choosetrans();
-    // Will indicate whether the agent cooperates or not; probability determined by = c / total
-    void commute(double Gsafety,repast::SharedContext<Infrastructure>* context,
-              repast::SharedDiscreteSpace<Infrastructure, repast::WrapAroundBorders, repast::SimpleAdder<Infrastructure> >* space);    // Choose three other agents from the given context and see if they cooperate or not
-    void move(repast::SharedDiscreteSpace<Infrastructure, repast::WrapAroundBorders, repast::SimpleAdder<Infrastructure> >* space);
+    int use(repast::SharedDiscreteSpace<Infrastructure, repast::WrapAroundBorders, repast::SimpleAdder<Infrastructure> >* space);    
+    //void move(repast::SharedDiscreteSpace<Infrastructure, repast::WrapAroundBorders, repast::SimpleAdder<Infrastructure> >* space); //Don't want this to move
     
 };
 

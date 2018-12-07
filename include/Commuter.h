@@ -6,6 +6,7 @@
 #include "repast_hpc/AgentId.h"
 #include "repast_hpc/SharedContext.h"
 #include "repast_hpc/SharedDiscreteSpace.h"
+#include "Infrastructure.h"
 
 
 /* Agents */
@@ -16,6 +17,7 @@ private:
     double              safety;
     double          thresh;
     int             Transtype;
+	int timestep=0;
     
 	
 public:
@@ -41,7 +43,7 @@ public:
     int choosetrans();
     // Will indicate whether the agent cooperates or not; probability determined by = c / total
     void commute(double Gsafety,repast::SharedContext<Commuter>* context,
-              repast::SharedDiscreteSpace<Commuter, repast::WrapAroundBorders, repast::SimpleAdder<Commuter> >* space);    // Choose three other agents from the given context and see if they cooperate or not
+              repast::SharedDiscreteSpace<Commuter, repast::WrapAroundBorders, repast::SimpleAdder<Commuter> >* space, repast::SharedDiscreteSpace<Infrastructure, repast::WrapAroundBorders, repast::SimpleAdder<Infrastructure> >* Infspace);    // Choose three other agents from the given context and see if they cooperate or not
     void move(repast::SharedDiscreteSpace<Commuter, repast::WrapAroundBorders, repast::SimpleAdder<Commuter> >* space);
     
 };

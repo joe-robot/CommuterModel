@@ -13,21 +13,25 @@
 #include "repast_hpc/SharedDiscreteSpace.h"
 #include "repast_hpc/GridComponents.h"
 
+#include "Infrastructure.h"
 #include "Commuter.h"
 
 
 class CommuterModel{
 	int stopAt;
 	int countOfAgents;
+	int countOfInfAgents;
 	int timeinsteps;
 	double Gsafety;
 	repast::Properties* props;
 	repast::SharedContext<Commuter> context;
+	repast::SharedContext<Infrastructure> Infcontext;
 
 	repast::SVDataSet* agentValues;
 
 
     repast::SharedDiscreteSpace<Commuter, repast::WrapAroundBorders, repast::SimpleAdder<Commuter> >* discreteSpace;
+      repast::SharedDiscreteSpace<Infrastructure, repast::WrapAroundBorders, repast::SimpleAdder<Infrastructure> >* discreteInfSpace;
 	
 public:
 	CommuterModel(std::string propsFile, int argc, char** argv, boost::mpi::communicator* comm);
