@@ -8,40 +8,40 @@ Commuter::Commuter(repast::AgentId id): id_(id), safety(repast::Random::instance
 {
     if(repast::Random::instance()->nextDouble()<0.5)
     {
-        Transtype= 1;
+        TransMode= 1;
     }
     else
     {
-        Transtype = 0;
+        TransMode = 0;
     }
     
 }
 
-Commuter::Commuter(repast::AgentId id, double newSafe, double newThresh, int newTranstype): id_(id), safety(newSafe), thresh(newThresh), Transtype(newTranstype){ }
+Commuter::Commuter(repast::AgentId id, double newSafe, double newThresh, int newMode): id_(id), safety(newSafe), thresh(newThresh), TransMode(newMode){ }
 
 Commuter::~Commuter(){ }
 
 
-void Commuter::set(int currentRank, double newSafe, double newThresh, int newTranstype){
+void Commuter::set(int currentRank, double newSafe, double newThresh, int newMode){
     id_.currentRank(currentRank);
     safety     = newSafe;
     thresh = newThresh;
-    Transtype= newTranstype;
+    TransMode= newMode;
 }
 
-int Commuter::choosetrans(){
+int Commuter::ChooseMode(){
     if(thresh<safety)
     {
-        Transtype=1;
+        TransMode=1;
     }
     else
     {
-        Transtype=0;
+        TransMode=0;
     }
-    return Transtype;
+    return TransMode;
 }
 
-void Commuter::commute(double Gsafety,repast::SharedContext<Commuter>* context, repast:: SharedDiscreteSpace<Commuter, repast::WrapAroundBorders, repast::SimpleAdder<Commuter> >* space, repast:: SharedDiscreteSpace<Infrastructure, repast::WrapAroundBorders, repast::SimpleAdder<Infrastructure> >* Infspace){
+void Commuter::Travel(double Gsafety,repast::SharedContext<Commuter>* context, repast:: SharedDiscreteSpace<Commuter, repast::WrapAroundBorders, repast::SimpleAdder<Commuter> >* space, repast:: SharedDiscreteSpace<Infrastructure, repast::WrapAroundBorders, repast::SimpleAdder<Infrastructure> >* Infspace){
 	timestep++;
     std::vector<Commuter*> agentsToPlay;
     std::vector<Infrastructure*> Infrastruct;
@@ -53,7 +53,7 @@ void Commuter::commute(double Gsafety,repast::SharedContext<Commuter>* context, 
     repast::Moore2DGridQuery<Commuter> moore2DQuery(space);
     moore2DQuery.query(center, 1, false, agentsToPlay);
     repast::Moore2DGridQuery<Infrastructure> moore2DInfQuery(Infspace);
-    moore2DInfQuery.query(center,CommuteDistance , true, Infrastruct);	//need to work out how radius of circle worked out (900 works for some reason)
+    moore2DInfQuery.query(center,CommuteDistance , true, Infrastruct);	
     
     double safetyPayoff     = 0;
     double threshPayoff = 0;
@@ -75,7 +75,8 @@ void Commuter::commute(double Gsafety,repast::SharedContext<Commuter>* context, 
 		std::vector<int> InfLoc;
 		Infspace->getLocation((*Infrastr)->getId(), InfLoc);
 		repast::Point<int> InfPoint(InfLoc);
-		std::cout<<timestep<<"  Distance: "<<CommuteDistance<<"   -WOW, infrastructure was found it is "<<	(*Infrastr)->getId() <<" at location " << InfPoint << " by "<< id_ <<" at "<< center <<std::endl;
+		std::cout<<timestep<<"  Distance: "<<CommuteDistance<<"   -WOW, infrastructure was found it is "<<	(*Infrastr)->getId() <<" at location " << InfPoint << " by "<< id_ <<" at "<< center <<std::endl;	
+		if(
 		safetyPayoff = safetyPayoff +((*Infrastr) -> use(Infspace));
 		numInf++;
 		Infrastr++;
@@ -83,20 +84,20 @@ void Commuter::commute(double Gsafety,repast::SharedContext<Commuter>* context, 
 	//std::cout <<"Hey old safety "<< id_ << " is " << safety;
 	if(numAgentsPlay!=0)
 	{
-    safety      = (safety+((safetyPayoff/(numAgentsPlay))/2)+(Gsafety/2))/(2);
+    		safety = (safety+((safetyPayoff/(numAgentsPlay))/2)+(Gsafety/2))/(2);
 	}
 	else
 	{
-		safety      = (safety+(Gsafety/2))/(1.5);
+		safety = (safety+(Gsafety/2))/(1.5);
 	}
 	 //std::cout <<"and my new is " << safety << " my threshold is " << thresh  << std::endl;
 	//std::cout<<"Global safety is " << Gsafety << std::endl;
-    choosetrans();
+    ChooseMode();
     
 }
 
 
-void Commuter::move(repast::SharedDiscreteSpace<Commuter, repast::WrapAroundBorders, repast::SimpleAdder<Commuter> >* space){
+/*void Commuter::move(repast::SharedDiscreteSpace<Commuter, repast::WrapAroundBorders, repast::SimpleAdder<Commuter> >* space){
 
     std::vector<int> agentLoc;
     space->getLocation(id_, agentLoc);
@@ -105,7 +106,7 @@ void Commuter::move(repast::SharedDiscreteSpace<Commuter, repast::WrapAroundBord
     agentNewLoc.push_back(agentLoc[1] +1);
     space->moveTo(id_,agentNewLoc);
     
-}
+}*/
 
 
 

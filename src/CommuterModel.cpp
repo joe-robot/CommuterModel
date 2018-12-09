@@ -2,6 +2,7 @@
 
 #include <stdio.h>
 #include <vector>
+#include <math.h>
 #include <boost/mpi.hpp>
 #include "repast_hpc/AgentId.h"
 #include "repast_hpc/RepastProcess.h"
@@ -13,6 +14,8 @@
 
 #include "CommuterModel.h"
 
+#define PI 3.141592653
+
 CommuterModel::CommuterModel(std::string propsFile, int argc, char** argv, boost::mpi::communicator* comm): context(comm),Infcontext(comm) {
 	props = new repast::Properties(propsFile, argc, argv, comm);
 	stopAt = repast::strToInt(props->getProperty("stop.at"));
@@ -20,21 +23,21 @@ CommuterModel::CommuterModel(std::string propsFile, int argc, char** argv, boost
 	countOfInfAgents = repast::strToInt(props->getProperty("count.of.infrastructure.agents"));
 	initializeRandom(*props, comm);
 	Gsafety=0;
-    repast::Point<double> origin(-100,-100);
-    repast::Point<double> extent(201, 201);
+   	repast::Point<double> origin(-100,-100);
+   	repast::Point<double> extent(201, 201);
     
-    repast::GridDimensions gd(origin, extent);
+    	repast::GridDimensions gd(origin, extent);
     
 	//sets to run on just 1 core
-    std::vector<int> processDims;
-    processDims.push_back(1);
-    processDims.push_back(1);
+   	std::vector<int> processDims;
+    	processDims.push_back(1);
+    	processDims.push_back(1);
     
-    discreteSpace = new repast::SharedDiscreteSpace<Commuter, repast::WrapAroundBorders, repast::SimpleAdder<Commuter> >("AgentDiscreteSpace", gd, processDims, 2, comm);
+    	discreteSpace = new repast::SharedDiscreteSpace<Commuter, repast::WrapAroundBorders, 		repast::SimpleAdder<Commuter> >("AgentDiscreteSpace", gd, processDims, 2, comm);
     
-    discreteInfSpace = new repast::SharedDiscreteSpace<Infrastructure, repast::WrapAroundBorders, repast::SimpleAdder<Infrastructure> >("AgentDiscreteSpace", gd, processDims, 2, comm);
+    	discreteInfSpace = new repast::SharedDiscreteSpace<Infrastructure, repast::WrapAroundBorders, repast::SimpleAdder<Infrastructure> >("AgentDiscreteSpace", gd, processDims, 2, comm);
 	
-   // std::cout << "RANK " << repast::RepastProcess::instance()->rank() << " BOUNDS: " << discreteSpace->bounds().origin() << " " << discreteSpace->bounds().extents() << std::endl;
+   	// std::cout << "RANK " << repast::RepastProcess::instance()->rank() << " BOUNDS: " << discreteSpace->bounds().origin() << " " << discreteSpace->bounds().extents() << std::endl;
     
    	context.addProjection(discreteSpace);
     	Infcontext.addProjection(discreteInfSpace);
@@ -58,7 +61,6 @@ CommuterModel::CommuterModel(std::string propsFile, int argc, char** argv, boost
 
 CommuterModel::~CommuterModel(){
 	delete props;
-
 	delete agentValues;
 }
 
@@ -66,7 +68,9 @@ void CommuterModel::init(){
 	int rank = repast::RepastProcess::instance()->rank();
 	timeinsteps=0;
 	for(int i = 0; i < countOfAgents; i++){ 
-        repast::Point<int> initialLocation(0 + i,0+ i);
+		double val = repast::Random::instance()->getGenerator("lognor")->next();
+		double angle = repast::Random::instance()->nextDouble()*2*PI;
+       		repast::Point<int> initialLocation(val*10*sin(angle),val*10*cos(angle));
 		repast::AgentId id(i, rank, 0);
 		id.currentRank(rank);
 		Commuter* agent = new Commuter(id);
@@ -74,13 +78,13 @@ void CommuterModel::init(){
         discreteSpace->moveTo(id, initialLocation);
 	}
 
-	for(int i = 0; i < countOfInfAgents; i++){ //<--need similar for infrastructure
+	for(int i = 0; i < countOfInfAgents; i++){ 
         repast::Point<int> initialLocation(0,0);
 		repast::AgentId id(i, rank, 1);
 		id.currentRank(rank);
 		Infrastructure* agent = new Infrastructure(id,1,1,0.5);
 		Infcontext.addAgent(agent);
-        discreteInfSpace->moveTo(id, initialLocation);
+       		discreteInfSpace->moveTo(id, initialLocation);
 	}
 }
 
@@ -88,7 +92,7 @@ void CommuterModel::init(){
 
 void CommuterModel::doSomething(){
 	timeinsteps++;
-	int Transtype;	
+	int TransMode;	
 	std::vector<Commuter*> agents;
 	context.selectAgents(repast::SharedContext<Commuter>::LOCAL, countOfAgents, agents);
 	std::vector<Commuter*>::iterator it = agents.begin();
@@ -99,22 +103,22 @@ void CommuterModel::doSomething(){
 		}
 		else
 		{
-        	Gsafety = (Gsafety + (*it)->getSafe())/2;
+        		Gsafety = (Gsafety + (*it)->getSafe())/2;
 		}
 		it++;
    	 }
 
 
 	it = agents.begin();
-	while(it != agents.end()){ //Need similar in the commuter class for using Infrastructure
-        (*it)->commute(Gsafety,&context, discreteSpace, discreteInfSpace);
+	while(it != agents.end()){
+        (*it)->Travel(Gsafety,&context, discreteSpace, discreteInfSpace);
 		it++;
-    }
+    	}
 
  	it = agents.begin();
-    while(it != agents.end()){  //Need similar for recivieing infrastructure information
-		Transtype= (*it)->getTrans();
-		if(Transtype ==1)
+   	while(it != agents.end()){  //Need similar for recivieing infrastructure information
+		TransMode= (*it)->getMode();
+		if(TransMode ==1)
 		{
 			//std::cout<<"just another cyleist " << (*it)->getId() << " at "<< timeinsteps << std::endl;
 		}
@@ -125,12 +129,12 @@ void CommuterModel::doSomething(){
 		it++;
     }
 
-
+	/*No Longer need to move since 'movement' is done by query
     it = agents.begin();
     while(it != agents.end()){
 		(*it)->move(discreteSpace);
 		it++;
-    }
+    }*/
 
 	discreteSpace->balance();
   
@@ -173,7 +177,7 @@ int DataSource_AgentTotalCars::getData(){
 	repast::SharedContext<Commuter>::const_local_iterator iter    = context->localBegin();
 	repast::SharedContext<Commuter>::const_local_iterator iterEnd = context->localEnd();
 	while( iter != iterEnd) {
-		if((*iter)->getTrans()==0)
+		if((*iter)->getMode()==0)
 		{
 			sum+= 1;
 		}
@@ -189,7 +193,7 @@ int DataSource_AgentTotalBikes::getData(){
 	repast::SharedContext<Commuter>::const_local_iterator iter    = context->localBegin();
 	repast::SharedContext<Commuter>::const_local_iterator iterEnd = context->localEnd();
 	while( iter != iterEnd) {
-		if((*iter)->getTrans()==1)
+		if((*iter)->getMode()==1)
 		{
 			sum+= 1;
 		}

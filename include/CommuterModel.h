@@ -23,6 +23,9 @@ class CommuterModel{
 	int countOfInfAgents;
 	int timeinsteps;
 	double Gsafety;
+	int NumCycle;
+	int NumCar;
+	int TransCost;
 	repast::Properties* props;
 	repast::SharedContext<Commuter> context;
 	repast::SharedContext<Infrastructure> Infcontext;

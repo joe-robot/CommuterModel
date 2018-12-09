@@ -1,3 +1,7 @@
 #Properties file
 stop.at = 3
 count.of.agents = 3
+count.of.infrastructure.agents = 1
+
+random.seed =2
+distribution.lognor = lognormal, 1, 1
