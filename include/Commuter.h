@@ -23,6 +23,7 @@ private:
 	int TravelDist;
     int timestep = 0;
 	int TransModeUsage=0;
+	std::vector<Infrastructure*> InfinRange;
 
 public:
     Commuter(repast::AgentId id,double InitialCar,double InitialBike, double InitialWalk, double InitialPTrans);

@@ -86,12 +86,12 @@ int Commuter::ChooseMode(int TransCost){
 	int TimeP;
 
 	//Calculating probability form habit (more likely to to stick to current transport method)
-	Habit=(-1*exp(-0.2*TransModeUsage)+1)*0.25;
+	Habit=(-1*exp(-0.2*TransModeUsage)+1)*0.5;
 
 	thresh= (1- exp(-0.01*TravelDist)*Health);
 	if(StartTransMode==1)	//Making the threshold lower if in the habit of cycling, only effecting it by maximum 10%
 	{
-		thresh= (1- exp(-0.01*TravelDist)*Health)-(Habit*(10/25));
+		thresh= (1- exp(-0.01*TravelDist)*Health)-(Habit*(10/50));
 	}
 	Cyclethresh = thresh * CycleAbility;
 
@@ -123,11 +123,19 @@ int Commuter::ChooseMode(int TransCost){
 	}
 	
 	
-	
-	TimeCar= 1*TravelDist;
-	TimePTrans= 1.5*TravelDist;
-	TimeBike = 2*TravelDist;
-	TimeWalk = 9*TravelDist;
+	if(TravelDist<50)	//Within 5 Km (congestion areas)
+	{
+		TimeCar= 1*TravelDist;
+		TimePTrans = 1.5*TravelDist;
+	}
+	else			//Outside of congetion areas
+	{
+		TimeCar= 0.5*(TravelDist-50)+50;	//Faster when out of 5Km radius by half (60mph)
+		TimePTrans= 50*1.5+0.4*(TravelDist-50) +	(1.1*exp(-0.001*(TravelDist-50))*TravelDist);						//Gradual decrease in time taken per distance
+	}
+
+	TimeBike = 1.5*TravelDist;
+	TimeWalk = 10*TravelDist;
 
 	CTimeP= ((incCar/TimeCar)/((incCar/TimeCar)+(incPTrans/TimePTrans)+(incBike/TimeBike)+(1/TimeWalk)));
 	BTimeP= ((incBike/TimeBike)/((incCar/TimeCar)+(incPTrans/TimePTrans)+(incBike/TimeBike)+(1/TimeWalk)));
@@ -145,15 +153,14 @@ int Commuter::ChooseMode(int TransCost){
 	PTSafeP= (incPTrans*PTransSafety)/((incCar*CarSafety)+(incPTrans*PTransSafety)+(incBike*CycleSafety)+(WalkSafety));
 	
 	double CarCost = 2500+TravelDist*0.1*48*5*2;//based on cost of car and distance
-	double CycleCost = 500;	//based on cost of bike
 	double WalkCost = 1;
-	if(TravelDist<5)
+	if(TravelDist<50)		//In 5km range a sheffield season pass is used so flat rate not based on distance
 	{
-		PTransCost = TransCost*48*5; ///Based on distance
+		PTransCost = TransCost*48; ///Based on distance
 	}
 	else
 	{
-		PTransCost = TransCost*48*5; //need to include rising price with distance
+		PTransCost = TransCost*48+(TravelDist-50)*TransCost*48; //need to include rising price with distance
 	}
 	
 	double CCostP= ((incCar/CarCost)/((incCar/CarCost)+(incPTrans/PTransCost)+(incBike/CycleCost)+(1/ WalkCost)));
@@ -205,8 +212,6 @@ int Commuter::ChooseMode(int TransCost){
 	}
 		
 
-	
-	//std::cout<<id_<<"   Distance: "<<TravelDist<< "Activity Threshold: " << thresh << "Health: " << Health<<std::endl;
 	double TransChoice=  repast::Random::instance()->getGenerator("duni")->next();
 
     if(CarP>TransChoice)
@@ -236,15 +241,21 @@ int Commuter::ChooseMode(int TransCost){
 	}
 
 void Commuter::Travel(double Gsafety,int TransCost,repast::SharedContext<Commuter>* context, repast:: SharedDiscreteSpace<Commuter, repast::WrapAroundBorders, repast::SimpleAdder<Commuter> >* space, repast:: SharedDiscreteSpace<Infrastructure, repast::WrapAroundBorders, repast::SimpleAdder<Infrastructure> >* Infspace){
+	int InfReach = 0;
+	int InfArea=0;
 	timestep++;
     std::vector<Commuter*> agentsToPlay;
     std::vector<Infrastructure*> Infrastruct;
-	std::vector<Infrastructure*> InfinRange;
     std::vector<int> agentLoc;
     space ->getLocation(id_, agentLoc);
     repast::Point<int> center(agentLoc);
     repast::Point<int> Ccenter(0,0);
     int CommuteDistance = ceil(space ->getDistance(agentLoc,Ccenter));  
+	double infAreasum=0;
+	double infSafesum=0;
+	double infRSafesum=0;
+	double infReachsum=0;
+	int CommuteArea=0;
 	TravelDist=CommuteDistance;
     repast::Moore2DGridQuery<Commuter> moore2DQuery(space);
     moore2DQuery.query(center, 3, true, agentsToPlay);
@@ -262,14 +273,13 @@ void Commuter::Travel(double Gsafety,int TransCost,repast::SharedContext<Commute
         std::vector<int> otherLoc;
         space->getLocation((*agentToPlay)->getId(), otherLoc);
         repast::Point<int> otherPoint(otherLoc);
-        //std::cout << " Agent " << id_ << " AT " << center << " PLAYING " << ((*agentToPlay)->getId().currentRank() == id_.currentRank() ? "LOCAL" : "NON-LOCAL") << " AGENT " << (*agentToPlay)->getId() << " AT " << otherPoint << std::endl;
         
         safetyPayoff = safetyPayoff + ((*agentToPlay)->getSafe());
         numAgentsPlay++;
         agentToPlay++;
     }
 
-	//std::cout <<"Hey old safety "<< id_ << " is " << safety;
+
 	if(numAgentsPlay!=0)
 	{
     		safety = safety*0.6+0.3*(safetyPayoff/(numAgentsPlay))+0.1*Gsafety;
@@ -278,8 +288,7 @@ void Commuter::Travel(double Gsafety,int TransCost,repast::SharedContext<Commute
 	{
 		safety = safety*0.8+0.2*Gsafety;
 	}
-	//std::cout <<"and my new is " << safety << " my threshold is " << thresh  << std::endl;
-	//std::cout<<"Global safety is " << Gsafety <<" At: "<<timestep<< std::endl;
+
 
    //Calculating min and max coordinates for infrastructure search
    if(center.getX()>=Ccenter.getX())
@@ -304,33 +313,68 @@ void Commuter::Travel(double Gsafety,int TransCost,repast::SharedContext<Commute
 	YSearch[1]=Ccenter.getY();
    }
 	
-	//std::cout<<id_<<"Xmin: "<<XSearch[0]<<"Xmax: "<<XSearch[1]<<"Ymin: "<<YSearch[0]<<" Ymax: "<<YSearch[1]<<"    "<<Ccenter.getX()<<"   "<<center.getX()<<std::endl;
-   std::vector<Infrastructure*>::iterator Infrastr = Infrastruct.begin();
-   while(Infrastr != Infrastruct.end()){
+
+  	std::vector<Infrastructure*>::iterator Infrastr = InfinRange.begin();
+	while(Infrastr != InfinRange.end())									//Removing saftey of previously used infastructure to account for any removed
+	{
+		if((*Infrastr)->getInfType()==0)
+		{	
+			double InfSafe = (*Infrastr)->getOldProvVar();
+			InfReach = (*Infrastr)->getReach();
+			InfArea  = PI*(InfReach)*(InfReach);
+			infAreasum=	infAreasum+(InfArea/2);		
+			infSafesum=	infSafesum+(InfArea/2)*InfSafe;
+			infRSafesum=infRSafesum+(InfReach/2)*InfSafe;
+			infReachsum=infReachsum+(InfReach/2);
+		}
+		else if((*Infrastr)->getInfType()==1)
+		{
+			CycleCost=CycleCost+((*Infrastr)->getOldProvVar()*48);
+		}
+	}
+
+	if(CommuteArea!=0)
+		{
+			safety=(infSafesum+((CommuteArea-InfArea)*safety))/CommuteArea;
+			safety= (safety*CommuteArea-infSafesum)/(CommuteArea-InfArea);
+
+		}
+		else
+		{
+			safety=(infRSafesum+((TravelDist-infReachsum)*safety))/TravelDist;
+			safety = (safety*TravelDist-infRSafesum)/(TravelDist-infReachsum);
+		}
+	
+		InfReach = 0;	//resetting variables to be used for calculating saftey from current infrastructure
+		InfArea  = 0;
+		infAreasum=	0;		
+		infSafesum=	0;
+		infRSafesum=0;
+		infReachsum=0;
+
+	Infrastr = Infrastruct.begin();
+   	while(Infrastr != Infrastruct.end()){
 		std::vector<int> InfLoc;
 		Infspace->getLocation((*Infrastr)->getId(), InfLoc);
 		repast::Point<int> InfPoint(InfLoc);
-		//std::cout<<timestep<<"  Distance: "<<CommuteDistance<<"   -WOW, infrastructure was found it is "<<	(*Infrastr)->getId() <<" at location " << InfPoint << " by "<< id_ <<" at "<< center <<std::endl;		
+
 	//If infrastructure within commuting range bettween agent and commuting point 
 
-if((InfPoint.getX()>=XSearch[0])&&(InfPoint.getX()<=XSearch[1])&&(InfPoint.getY()>=YSearch[0])&&(InfPoint.getY()<=YSearch[1]))
+		if((InfPoint.getX()>=XSearch[0]) && (InfPoint.getX()<=XSearch[1]) && (InfPoint.getY()>=YSearch[0]) && (InfPoint.getY()<=YSearch[1]))
 		{
-			int InfReach = (*Infrastr)->getReach();	//finding area of range
-			int InfArea  = PI*(InfReach)*(InfReach);
-			if((*Infrastr)->getInfType()==0)
+			InfReach = (*Infrastr)->getReach();	//finding area of range
+			InfArea  = PI*(InfReach)*(InfReach);
+			if((*Infrastr)->getInfType()==0&&((*Infrastr)->getProvVar())>safety)	//if saftey infrastructure and provided saftey bigger than agent current safety perception
 			{
 				InfinRange.push_back(*Infrastr);
 				double InfSafe = (*Infrastr)->getProvVar();
-				int CommuteArea=(XSearch[1]-XSearch[0])*(YSearch[1]-YSearch[0]);
-				if(CommuteArea!=0)
-				{
-					safety=(1-((InfArea/2)/CommuteArea))*safety+(((InfArea/2)/CommuteArea)*InfSafe);
-				}
-				else
-				{
-					safety=(1-(InfReach/TravelDist))*safety+((InfReach/TravelDist)*InfSafe);
-				}
-			//safetyPayoff = safetyPayoff +((*Infrastr) -> use(Infspace));
+				CommuteArea=(XSearch[1]-XSearch[0])*(YSearch[1]-YSearch[0]);
+				infAreasum=	infAreasum+(InfArea/2);		
+				infSafesum=	infSafesum+(InfArea/2)*InfSafe;
+				infRSafesum=infRSafesum+(InfReach/2)*InfSafe;
+				infReachsum=infReachsum+(InfReach/2);
+	
+				
 			}
 			else if((*Infrastr)->getInfType()==1)
 			{
@@ -364,6 +408,19 @@ if((InfPoint.getX()>=XSearch[0])&&(InfPoint.getX()<=XSearch[1])&&(InfPoint.getY(
 		}
 	Infrastr++;
 	}
+	if(InfArea!=0&&infSafesum!=0)
+	{
+		if(CommuteArea!=0)
+		{
+			safety=(infSafesum+((CommuteArea-InfArea)*safety))/CommuteArea;
+
+		}
+		else
+		{
+			safety=(infRSafesum+((TravelDist-infReachsum)*safety))/TravelDist;
+		}
+
+	}
 
 	//Calling function to choose transport method
     ChooseMode(TransCost);
@@ -380,18 +437,5 @@ if((InfPoint.getX()>=XSearch[0])&&(InfPoint.getX()<=XSearch[1])&&(InfPoint.getY(
 
     
 }
-
-
-/*void Commuter::move(repast::SharedDiscreteSpace<Commuter, repast::WrapAroundBorders, repast::SimpleAdder<Commuter> >* space){
-
-    std::vector<int> agentLoc;
-    space->getLocation(id_, agentLoc);
-    std::vector<int> agentNewLoc;
-    agentNewLoc.push_back(agentLoc[0]+1);
-    agentNewLoc.push_back(agentLoc[1] +1);
-    space->moveTo(id_,agentNewLoc);
-    
-}*/
-
 
 

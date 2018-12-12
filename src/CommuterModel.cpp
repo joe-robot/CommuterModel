@@ -24,8 +24,8 @@ CommuterModel::CommuterModel(std::string propsFile, int argc, char** argv, boost
 	initializeRandom(*props, comm);
 	Gsafety=0;
 	TransCost=15;
-   	repast::Point<double> origin(-500,-500);
-   	repast::Point<double> extent(501, 501);
+   	repast::Point<double> origin(-300,-300);
+   	repast::Point<double> extent(601, 601);
     
     	repast::GridDimensions gd(origin, extent);
     
@@ -82,7 +82,7 @@ void CommuterModel::init(){
 	for(int i = 0; i < countOfAgents; i++){ 
 		double dist = repast::Random::instance()->getGenerator("lognor")->next();
 		double angle = repast::Random::instance()->nextDouble()*2*PI;
-       		repast::Point<int> initialLocation(dist*100*sin(angle),dist*100*cos(angle));
+       		repast::Point<int> initialLocation(dist*300*sin(angle),dist*300*cos(angle));	//Distributing agents randomly
 		repast::AgentId id(i, rank, 0);
 		id.currentRank(rank);
 		Commuter* agent = new Commuter(id,initialCar,initialBike,initialWalk,initialPTrans);

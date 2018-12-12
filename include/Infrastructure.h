@@ -14,6 +14,7 @@ class Infrastructure{
 private:
     repast::AgentId  	id_;
     int             	Capacity;
+	int 				maxCapacity;
     int         		Reach;
     double           	ProvVar=-1;
 	double				OldProvVar; //<-might not need now tbh
@@ -22,7 +23,7 @@ private:
 public:
     //Infrastructure(repast::AgentId id);
 	Infrastructure(){}
-    Infrastructure(repast::AgentId id, int InfType, int newCap, int newReach, double newPVar);
+    Infrastructure(repast::AgentId id, int InfType, int newCap, int newMaxCap, int newReach, double newPVar);
 	
     ~Infrastructure();
 	
@@ -38,7 +39,7 @@ public:
 	int getInfType(){								 return InfType;}
 	
     /* Setter */
-    void set(int currentRank, int InfType,int newCap, int newReach, double newPVar);
+    void set(int currentRank, int InfType,int newCap, int newMaxCap, int newReach, double newPVar);
 	
     /* Actions */
     int use(repast::SharedDiscreteSpace<Infrastructure, repast::WrapAroundBorders, repast::SimpleAdder<Infrastructure> >* space);    
