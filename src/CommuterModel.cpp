@@ -94,7 +94,7 @@ void CommuterModel::init(){
         	repast::Point<int> initialLocation(0,0);
 		repast::AgentId id(i, rank, 1);
 		id.currentRank(rank);
-		Infrastructure* agent = new Infrastructure(id,1,1,0.5);
+		Infrastructure* agent = new Infrastructure(id,1,1,1,0.5);
 		Infcontext.addAgent(agent);
        		discreteInfSpace->moveTo(id, initialLocation);
 	}*/

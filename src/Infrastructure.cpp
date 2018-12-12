@@ -4,36 +4,55 @@
 #include "repast_hpc/Moore2DGridQuery.h"
 #include "repast_hpc/Point.h"
 
-Infrastructure::Infrastructure(repast::AgentId id, int newCap, int newReach, double newPSafe): id_(id), Capacity(newCap), Reach(newReach), ProvSafety(newPSafe), OldProvSafety(newPSafe){ }
+Infrastructure::Infrastructure(repast::AgentId id, int newInfType, int newCap, int newReach, double newPVar): id_(id), InfType(newInfType),Capacity(newCap), Reach(newReach), ProvVar(newPVar), OldProvVar(newPVar){ }
 
 Infrastructure::~Infrastructure(){ }
 
 
-void Infrastructure::set(int currentRank, int newCap, int newReach, double newPSafe){
+void Infrastructure::set(int currentRank,int newInfType, int newCap, int newReach, double newPVar){
     id_.currentRank(currentRank);
+	InfType=newInfType;
     Capacity     = newCap;
     Reach = newReach;			//Got a problem with reach as the reach circle is not included in the query!
-	if(ProvSafety!=-1)
+	if(ProvVar!=-1)
 	{	
-		OldProvSafety=ProvSafety;
+		OldProvVar=ProvVar;
 	}
 	else
 	{
-		OldProvSafety=newPSafe;
+		OldProvVar=newPVar;
 	}
-    ProvSafety = newPSafe;
+    ProvVar = newPVar;
     
 }
 
 
 int Infrastructure::use(repast:: SharedDiscreteSpace<Infrastructure, repast::WrapAroundBorders, repast::SimpleAdder<Infrastructure> >* space){
-	OldProvSafety=ProvSafety;
-	if(ProvSafety !=0)
+	OldProvVar=ProvVar;
+
+	if(InfType==0)		//If infrastructure is saftey boosting infrastructure
 	{
-	ProvSafety = ProvSafety - ProvSafety*(Capacity/Capacity+1);
+		ProvVar=ProvVar;
+	}
+	else if(InfType==1)	//If infrastucture is economic subsidising infrastructure
+	{
+		ProvVar=ProvVar;
+	}
+	else if(InfType==2)	//If infrastructure is Health improving infrastructure
+	{
+		ProvVar=ProvVar;
+	}
+	else if(InfType==3)	//If Infrastructure is Cycle training infrastructure
+	{
+		ProvVar=ProvVar;
+	}
+	
+	/*if(ProvVar !=0)
+	{
+	ProvVar = ProvVar - ProvVar*(Capacity/Capacity+1);
 	}	//Need a better algorithm here it is making
-	Capacity ++;
-	return ProvSafety;
+	Capacity ++;*/
+	return ProvVar;
 
 }
 

@@ -239,6 +239,7 @@ void Commuter::Travel(double Gsafety,int TransCost,repast::SharedContext<Commute
 	timestep++;
     std::vector<Commuter*> agentsToPlay;
     std::vector<Infrastructure*> Infrastruct;
+	std::vector<Infrastructure*> InfinRange;
     std::vector<int> agentLoc;
     space ->getLocation(id_, agentLoc);
     repast::Point<int> center(agentLoc);
@@ -302,6 +303,7 @@ void Commuter::Travel(double Gsafety,int TransCost,repast::SharedContext<Commute
 	YSearch[0]=center.getY();
 	YSearch[1]=Ccenter.getY();
    }
+	
 	//std::cout<<id_<<"Xmin: "<<XSearch[0]<<"Xmax: "<<XSearch[1]<<"Ymin: "<<YSearch[0]<<" Ymax: "<<YSearch[1]<<"    "<<Ccenter.getX()<<"   "<<center.getX()<<std::endl;
    std::vector<Infrastructure*>::iterator Infrastr = Infrastruct.begin();
    while(Infrastr != Infrastruct.end()){
@@ -313,28 +315,69 @@ void Commuter::Travel(double Gsafety,int TransCost,repast::SharedContext<Commute
 
 if((InfPoint.getX()>=XSearch[0])&&(InfPoint.getX()<=XSearch[1])&&(InfPoint.getY()>=YSearch[0])&&(InfPoint.getY()<=YSearch[1]))
 		{
-		int InfReach = (*Infrastr)->getReach();	//finding area of range
-		int InfArea  = PI*(InfReach)*(InfReach);
-		double InfSafe = (*Infrastr)->getProvSafety();
-		int CommuteArea=(XSearch[1]-XSearch[0])*(YSearch[1]-YSearch[0]);
-		if(CommuteArea!=0)
-		{
-			safety=(1-((InfArea/2)/CommuteArea))*safety+(((InfArea/2)/CommuteArea)*InfSafe);
-		}
-		else
-		{
-			safety=(1-(InfReach/TravelDist))*safety+((InfReach/TravelDist)*InfSafe);
-		}
-		//safetyPayoff = safetyPayoff +((*Infrastr) -> use(Infspace));
+			int InfReach = (*Infrastr)->getReach();	//finding area of range
+			int InfArea  = PI*(InfReach)*(InfReach);
+			if((*Infrastr)->getInfType()==0)
+			{
+				InfinRange.push_back(*Infrastr);
+				double InfSafe = (*Infrastr)->getProvVar();
+				int CommuteArea=(XSearch[1]-XSearch[0])*(YSearch[1]-YSearch[0]);
+				if(CommuteArea!=0)
+				{
+					safety=(1-((InfArea/2)/CommuteArea))*safety+(((InfArea/2)/CommuteArea)*InfSafe);
+				}
+				else
+				{
+					safety=(1-(InfReach/TravelDist))*safety+((InfReach/TravelDist)*InfSafe);
+				}
+			//safetyPayoff = safetyPayoff +((*Infrastr) -> use(Infspace));
+			}
+			else if((*Infrastr)->getInfType()==1)
+			{
+				InfinRange.push_back(*Infrastr);
+				CycleCost=CycleCost-((*Infrastr)->getProvVar()*48);
+			}
+			else if((*Infrastr)->getInfType()==2)
+			{
+				if(repast::Random::instance()->getGenerator("duni")->next()<0.1)
+				{
+					if(Health!=0)
+					{
+						InfinRange.push_back(*Infrastr);
+						Health=Health*1.01;
+					}
+				}
+			}
+			else if((*Infrastr)->getInfType()==3)
+			{
+				if(repast::Random::instance()->getGenerator("duni")->next()<0.1)
+				{
+					InfinRange.push_back(*Infrastr);
+					CycleAbility=CycleAbility*1.01;
+					if(CycleAbility==0)
+					{
+						CycleAbility=0.05;
+					}
+				}
+			}
 		numInf++;
 		}
-		Infrastr++;
+	Infrastr++;
 	}
 
 	//Calling function to choose transport method
     ChooseMode(TransCost);
+	
+	//If cycling chosen use the infrastructure
+	if(TransMode==1)
+	{
+		Infrastr = InfinRange.begin();
+  		while(Infrastr != InfinRange.end()){
+			(*Infrastr)-> use(Infspace);
+			Infrastr++;
+		}
+	}
 
-	//std::cout<<"***"<<id_<<" :My Threshold is: "<<thresh<<" at "<<timestep<<std::endl;
     
 }
 

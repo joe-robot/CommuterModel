@@ -15,13 +15,14 @@ private:
     repast::AgentId  	id_;
     int             	Capacity;
     int         		Reach;
-    double           	ProvSafety=-1;
-	double				OldProvSafety; //<-might not need now tbh
+    double           	ProvVar=-1;
+	double				OldProvVar; //<-might not need now tbh
+	int					InfType;
 	
 public:
     //Infrastructure(repast::AgentId id);
 	Infrastructure(){}
-    Infrastructure(repast::AgentId id, int newCap, int newReach, double newPSafe);
+    Infrastructure(repast::AgentId id, int InfType, int newCap, int newReach, double newPVar);
 	
     ~Infrastructure();
 	
@@ -32,11 +33,12 @@ public:
     /* Getters specific to this kind of Agent */
     int getCapacity(){                               return Capacity;  }
     int getReach(){                                  return Reach;  }
-    double getProvSafety(){                          return ProvSafety;  }
-	double getOldProvSafety(){						 return OldProvSafety; }
+    double getProvVar(){                          return ProvVar;  }
+	double getOldProvVar(){						 return OldProvVar; }
+	int getInfType(){								 return InfType;}
 	
     /* Setter */
-    void set(int currentRank, int newCap, int newReach, double newPSafe);
+    void set(int currentRank, int InfType,int newCap, int newReach, double newPVar);
 	
     /* Actions */
     int use(repast::SharedDiscreteSpace<Infrastructure, repast::WrapAroundBorders, repast::SimpleAdder<Infrastructure> >* space);    

@@ -14,11 +14,11 @@ class Commuter {
 private:
 	repast::AgentId id_;
     double safety;
-	//needs to be a vector ?? double InfUsed[][]
     double thresh;
     int TransMode;
 	double Health;
 	double CycleAbility;
+	double CycleCost=500;
 	double EconomicPosition;
 	int TravelDist;
     int timestep = 0;
