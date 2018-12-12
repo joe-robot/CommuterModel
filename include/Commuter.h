@@ -8,46 +8,47 @@
 #include "repast_hpc/SharedDiscreteSpace.h"
 #include "Infrastructure.h"
 
-
 /* Agents */
-class Commuter{
-	
+class Commuter {
+
 private:
-    repast::AgentId   id_;
-    double              safety;
-    double          thresh;
-    int             TransMode;
-	int timestep=0;
-    
-	
+	repast::AgentId id_;
+    double safety;
+	//needs to be a vector ?? double InfUsed[][]
+    double thresh;
+    int TransMode;
+	double Health;
+	double CycleAbility;
+	double EconomicPosition;
+	int TravelDist;
+    int timestep = 0;
+	int TransModeUsage=0;
+
 public:
-    Commuter(repast::AgentId id);
-	Commuter(){}
-    Commuter(repast::AgentId id, double newSafe, double newThresh, int newMode);
-	
+    Commuter(repast::AgentId id,double InitialCar,double InitialBike, double InitialWalk, double InitialPTrans);
+    Commuter() {}
+    Commuter(repast::AgentId id, int newTravelDist, double newSafe, double newThresh, int newMode, double newHealth, double newCycleAbility, double newEconomicPosition);
+
     ~Commuter();
-	
+
     /* Required Getters */
-    virtual repast::AgentId& getId(){                   return id_;    }
-    virtual const repast::AgentId& getId() const {      return id_;    }
-	
+    virtual repast::AgentId& getId() { return id_; }
+    virtual const repast::AgentId& getId() const { return id_; }
+
     /* Getters specific to this kind of Agent */
-    double getSafe(){                                      return safety;  }
-    double getThresh(){                                  return thresh;  }
-    int getMode(){                                  return TransMode;  }
-	
+    double getSafe() { return safety; }
+    double getThresh() { return thresh; }
+    int getMode() { return TransMode; }
+
     /* Setter */
-    void set(int currentRank, double newSafe, double newThresh, int newMode);
-	
+    void set(int currentRank, int newTravelDist, double newSafe, double newThresh, int newMode, double newHealth, double newCycleAbility, double newEconomicPosition);
+
     /* Actions */
-    int ChooseMode();
+    int ChooseMode(int TransCost);
     // Will indicate whether the agent cooperates or not; probability determined by = c / total
-    void Travel(double Gsafety,repast::SharedContext<Commuter>* context,
-              repast::SharedDiscreteSpace<Commuter, repast::WrapAroundBorders, repast::SimpleAdder<Commuter> >* space, repast::SharedDiscreteSpace<Infrastructure, repast::WrapAroundBorders, repast::SimpleAdder<Infrastructure> >* Infspace);    // Choose three other agents from the given context and see if they cooperate or not
+    void Travel(double Gsafety,int TransCost, repast::SharedContext<Commuter>* context,
+        repast::SharedDiscreteSpace<Commuter, repast::WrapAroundBorders, repast::SimpleAdder<Commuter> >* space, repast::SharedDiscreteSpace<Infrastructure, repast::WrapAroundBorders, repast::SimpleAdder<Infrastructure> >* Infspace); // Choose three other agents from the given context and see if they cooperate or not
     //void move(repast::SharedDiscreteSpace<Commuter, repast::WrapAroundBorders, repast::SimpleAdder<Commuter> >* space);
-    
 };
 
-
 #endif
-

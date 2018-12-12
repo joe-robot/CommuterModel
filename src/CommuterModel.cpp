@@ -23,8 +23,9 @@ CommuterModel::CommuterModel(std::string propsFile, int argc, char** argv, boost
 	countOfInfAgents = repast::strToInt(props->getProperty("count.of.infrastructure.agents"));
 	initializeRandom(*props, comm);
 	Gsafety=0;
-   	repast::Point<double> origin(-100,-100);
-   	repast::Point<double> extent(201, 201);
+	TransCost=15;
+   	repast::Point<double> origin(-500,-500);
+   	repast::Point<double> extent(501, 501);
     
     	repast::GridDimensions gd(origin, extent);
     
@@ -52,6 +53,12 @@ CommuterModel::CommuterModel(std::string propsFile, int argc, char** argv, boost
     
 	DataSource_AgentTotalBikes* AgentTotalBikes_DataSource = new DataSource_AgentTotalBikes(&context);
 	builder.addDataSource(createSVDataSource("Total Cyclists", AgentTotalBikes_DataSource, std::plus<int>()));
+	
+	DataSource_AgentTotalWalkers* AgentTotalWalkers_DataSource = new DataSource_AgentTotalWalkers(&context);
+	builder.addDataSource(createSVDataSource("Total Walkers", AgentTotalWalkers_DataSource, std::plus<int>()));
+
+	DataSource_AgentTotalPTrans* AgentTotalPTrans_DataSource = new DataSource_AgentTotalPTrans(&context);
+	builder.addDataSource(createSVDataSource("Total Pub Transport", AgentTotalPTrans_DataSource, std::plus<int>()));
     
 	// Use the builder to create the data set
 	agentValues = builder.createDataSet();
@@ -65,27 +72,32 @@ CommuterModel::~CommuterModel(){
 }
 
 void CommuterModel::init(){
+	double initialCar=double(repast::strToInt(props->getProperty("initial.car.proportion")))/100;
+	double initialBike=double(repast::strToInt(props->getProperty("initial.bike.proportion")))/100;
+	double initialWalk=double(repast::strToInt(props->getProperty("initial.walk.proportion")))/100;
+	double initialPTrans=double(repast::strToInt(props->getProperty("initial.ptrans.proportion")))/100;
+
 	int rank = repast::RepastProcess::instance()->rank();
 	timeinsteps=0;
 	for(int i = 0; i < countOfAgents; i++){ 
-		double val = repast::Random::instance()->getGenerator("lognor")->next();
+		double dist = repast::Random::instance()->getGenerator("lognor")->next();
 		double angle = repast::Random::instance()->nextDouble()*2*PI;
-       		repast::Point<int> initialLocation(val*10*sin(angle),val*10*cos(angle));
+       		repast::Point<int> initialLocation(dist*100*sin(angle),dist*100*cos(angle));
 		repast::AgentId id(i, rank, 0);
 		id.currentRank(rank);
-		Commuter* agent = new Commuter(id);
+		Commuter* agent = new Commuter(id,initialCar,initialBike,initialWalk,initialPTrans);
 		context.addAgent(agent);
-        discreteSpace->moveTo(id, initialLocation);
+       		discreteSpace->moveTo(id, initialLocation);
 	}
 
-	for(int i = 0; i < countOfInfAgents; i++){ 
-        repast::Point<int> initialLocation(0,0);
+	/*for(int i = 0; i < countOfInfAgents; i++){ 
+        	repast::Point<int> initialLocation(0,0);
 		repast::AgentId id(i, rank, 1);
 		id.currentRank(rank);
 		Infrastructure* agent = new Infrastructure(id,1,1,0.5);
 		Infcontext.addAgent(agent);
        		discreteInfSpace->moveTo(id, initialLocation);
-	}
+	}*/
 }
 
 
@@ -93,25 +105,14 @@ void CommuterModel::init(){
 void CommuterModel::doSomething(){
 	timeinsteps++;
 	int TransMode;	
+	NumCar=0;
+	NumCycle=0;
+	getGSafe();
 	std::vector<Commuter*> agents;
 	context.selectAgents(repast::SharedContext<Commuter>::LOCAL, countOfAgents, agents);
 	std::vector<Commuter*>::iterator it = agents.begin();
 	while(it != agents.end()){
-		if(Gsafety==0)
-		{
-			Gsafety =(*it)->getSafe();
-		}
-		else
-		{
-        		Gsafety = (Gsafety + (*it)->getSafe())/2;
-		}
-		it++;
-   	 }
-
-
-	it = agents.begin();
-	while(it != agents.end()){
-        (*it)->Travel(Gsafety,&context, discreteSpace, discreteInfSpace);
+        (*it)->Travel(Gsafety, TransCost,&context, discreteSpace, discreteInfSpace);
 		it++;
     	}
 
@@ -120,11 +121,25 @@ void CommuterModel::doSomething(){
 		TransMode= (*it)->getMode();
 		if(TransMode ==1)
 		{
-			//std::cout<<"just another cyleist " << (*it)->getId() << " at "<< timeinsteps << std::endl;
+			std::cout<<"just another cyleist: " << (*it)->getId() << " at "<< timeinsteps << std::endl;
+			NumCycle++;
+		}
+		else if(TransMode==0)
+		{
+			std::cout<<"just another driver: " << (*it)->getId() << " at "<< timeinsteps << std::endl;
+			NumCar++;
+		}
+		else if(TransMode==2)
+		{
+			std::cout<<"just a walking dude, dude " << (*it)->getId() << " at "<< timeinsteps << std::endl;
+		}
+		else if(TransMode==3)
+		{
+			std::cout<<"just riding public transport over here boss: " << (*it)->getId() << " at "<< timeinsteps << std::endl;
 		}
 		else
 		{
-			//std::cout<<"just another driver" << std::endl;
+			//std::cout<<"This is embarassing I'm not going to work at all: " << (*it)->getId() << " at "<< timeinsteps << std::endl;
 		}
 		it++;
     }
@@ -148,12 +163,10 @@ void CommuterModel::initSchedule(repast::ScheduleRunner& runner){
 
 
 	//Data Collection
-	runner.scheduleEvent(1.5, 5, repast::Schedule::FunctorPtr(new repast::MethodFunctor<repast::DataSet>(agentValues, &repast::DataSet::record)));
+	runner.scheduleEvent(0.5, 1, repast::Schedule::FunctorPtr(new repast::MethodFunctor<repast::DataSet>(agentValues, &repast::DataSet::record)));
 	runner.scheduleEvent(10.6, 10, repast::Schedule::FunctorPtr(new repast::MethodFunctor<repast::DataSet>(agentValues, &repast::DataSet::write)));
 runner.scheduleEndEvent(repast::Schedule::FunctorPtr(new repast::MethodFunctor<repast::DataSet>(agentValues, &repast::DataSet::record)));
 	runner.scheduleEndEvent(repast::Schedule::FunctorPtr(new repast::MethodFunctor<repast::DataSet>(agentValues, &repast::DataSet::write)));
-
-
 	
 }
 
@@ -168,7 +181,31 @@ void CommuterModel::recordResults(){
     }
 }
 
+int CommuterModel::CalcCosts(){
+	int Cost = NumCar;
 
+	return Cost;
+
+}
+
+void CommuterModel::getGSafe()
+{
+	std::vector<Commuter*> agents;
+	context.selectAgents(repast::SharedContext<Commuter>::LOCAL, countOfAgents, agents);
+	std::vector<Commuter*>::iterator Git = agents.begin();
+	while(Git != agents.end()){
+		if(Gsafety==0)
+		{
+			Gsafety =(*Git)->getSafe();
+		}
+		else
+		{
+        		Gsafety = (Gsafety + (*Git)->getSafe())/2;
+		}
+		Git++;
+   	 }
+
+}
 
 DataSource_AgentTotalCars::DataSource_AgentTotalCars(repast::SharedContext<Commuter>* car) : context(car){ }
 
@@ -194,6 +231,38 @@ int DataSource_AgentTotalBikes::getData(){
 	repast::SharedContext<Commuter>::const_local_iterator iterEnd = context->localEnd();
 	while( iter != iterEnd) {
 		if((*iter)->getMode()==1)
+		{
+			sum+= 1;
+		}
+		iter++;
+	}
+	return sum;
+}
+
+DataSource_AgentTotalWalkers::DataSource_AgentTotalWalkers(repast::SharedContext<Commuter>* Walk) : context(Walk){ }
+
+int DataSource_AgentTotalWalkers::getData(){
+	double sum = 0;
+	repast::SharedContext<Commuter>::const_local_iterator iter    = context->localBegin();
+	repast::SharedContext<Commuter>::const_local_iterator iterEnd = context->localEnd();
+	while( iter != iterEnd) {
+		if((*iter)->getMode()==2)
+		{
+			sum+= 1;
+		}
+		iter++;
+	}
+	return sum;
+}
+
+DataSource_AgentTotalPTrans::DataSource_AgentTotalPTrans(repast::SharedContext<Commuter>* PTrans) : context(PTrans){ }
+
+int DataSource_AgentTotalPTrans::getData(){
+	double sum = 0;
+	repast::SharedContext<Commuter>::const_local_iterator iter    = context->localBegin();
+	repast::SharedContext<Commuter>::const_local_iterator iterEnd = context->localEnd();
+	while( iter != iterEnd) {
+		if((*iter)->getMode()==3)
 		{
 			sum+= 1;
 		}

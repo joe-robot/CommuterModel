@@ -3,5 +3,11 @@ stop.at = 3
 count.of.agents = 3
 count.of.infrastructure.agents = 1
 
+initial.car.proportion=75;
+initial.bike.proportion=2;
+initial.walk.proportion=10;
+initial.ptrans.proportion=13;
+
 random.seed =2
 distribution.lognor = lognormal, 1, 1
+distribution.duni=double_uniform,0,1

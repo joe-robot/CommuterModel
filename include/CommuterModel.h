@@ -33,8 +33,8 @@ class CommuterModel{
 	repast::SVDataSet* agentValues;
 
 
-    repast::SharedDiscreteSpace<Commuter, repast::WrapAroundBorders, repast::SimpleAdder<Commuter> >* discreteSpace;
-      repast::SharedDiscreteSpace<Infrastructure, repast::WrapAroundBorders, repast::SimpleAdder<Infrastructure> >* discreteInfSpace;
+    	repast::SharedDiscreteSpace<Commuter, repast::WrapAroundBorders, repast::SimpleAdder<Commuter> >* discreteSpace;
+      	repast::SharedDiscreteSpace<Infrastructure, repast::WrapAroundBorders, repast::SimpleAdder<Infrastructure> >* discreteInfSpace;
 	
 public:
 	CommuterModel(std::string propsFile, int argc, char** argv, boost::mpi::communicator* comm);
@@ -46,6 +46,10 @@ public:
 	void doSomething();
 	void initSchedule(repast::ScheduleRunner& runner);
 	void recordResults();
+	int getTransCost() {return TransCost;};
+private:
+	int CalcCosts();
+	void getGSafe();
 };
 
 
@@ -66,6 +70,24 @@ private:
 	
 public:
 	DataSource_AgentTotalBikes(repast::SharedContext<Commuter>* bike);
+	int getData();
+};
+
+class DataSource_AgentTotalWalkers : public repast::TDataSource<int>{
+private:
+	repast::SharedContext<Commuter>* context;
+	
+public:
+	DataSource_AgentTotalWalkers(repast::SharedContext<Commuter>* Walk);
+	int getData();
+};
+
+class DataSource_AgentTotalPTrans : public repast::TDataSource<int>{
+private:
+	repast::SharedContext<Commuter>* context;
+	
+public:
+	DataSource_AgentTotalPTrans(repast::SharedContext<Commuter>* PTrans);
 	int getData();
 };
 

@@ -14,9 +14,9 @@ class Infrastructure{
 private:
     repast::AgentId  	id_;
     int             	Capacity;
-    int         	Reach;
-    double           	ProvSafety;
-    
+    int         		Reach;
+    double           	ProvSafety=-1;
+	double				OldProvSafety; //<-might not need now tbh
 	
 public:
     //Infrastructure(repast::AgentId id);
@@ -33,6 +33,7 @@ public:
     int getCapacity(){                               return Capacity;  }
     int getReach(){                                  return Reach;  }
     double getProvSafety(){                          return ProvSafety;  }
+	double getOldProvSafety(){						 return OldProvSafety; }
 	
     /* Setter */
     void set(int currentRank, int newCap, int newReach, double newPSafe);
