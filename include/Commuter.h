@@ -40,14 +40,16 @@ public:
     double getSafe() { return safety; }
     double getThresh() { return thresh; }
     int getMode() { return TransMode; }
+	double getHealth() { return Health;}
+	double getCycleAbility() {return CycleAbility;}
 
     /* Setter */
     void set(int currentRank, int newTravelDist, double newSafe, double newThresh, int newMode, double newHealth, double newCycleAbility, double newEconomicPosition);
 
     /* Actions */
-    int ChooseMode(int TransCost);
+    int ChooseMode(double TransCost);
     // Will indicate whether the agent cooperates or not; probability determined by = c / total
-    void Travel(double Gsafety,int TransCost, repast::SharedContext<Commuter>* context,
+    void Travel(double Gsafety,double TransCost, repast::SharedContext<Commuter>* context,
         repast::SharedDiscreteSpace<Commuter, repast::WrapAroundBorders, repast::SimpleAdder<Commuter> >* space, repast::SharedDiscreteSpace<Infrastructure, repast::WrapAroundBorders, repast::SimpleAdder<Infrastructure> >* Infspace); // Choose three other agents from the given context and see if they cooperate or not
     //void move(repast::SharedDiscreteSpace<Commuter, repast::WrapAroundBorders, repast::SimpleAdder<Commuter> >* space);
 };

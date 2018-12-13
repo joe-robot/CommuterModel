@@ -3,6 +3,7 @@
 #include <stdio.h>
 #include <vector>
 #include <math.h>
+#include <ios>
 #include <boost/mpi.hpp>
 #include "repast_hpc/AgentId.h"
 #include "repast_hpc/RepastProcess.h"
@@ -11,6 +12,7 @@
 #include "repast_hpc/initialize_random.h"
 #include "repast_hpc/SVDataSetBuilder.h"
 #include "repast_hpc/Point.h"
+#include <boost/math/distributions/beta.hpp>	//Including the BETA sistribution from boost libraries
 
 #include "CommuterModel.h"
 
@@ -20,13 +22,16 @@ CommuterModel::CommuterModel(std::string propsFile, int argc, char** argv, boost
 	props = new repast::Properties(propsFile, argc, argv, comm);
 	stopAt = repast::strToInt(props->getProperty("stop.at"));
 	countOfAgents = repast::strToInt(props->getProperty("count.of.agents"));
+	EndcountOfAgents = repast::strToInt(props->getProperty("count.of.agents.end"));
 	countOfInfAgents = repast::strToInt(props->getProperty("count.of.infrastructure.agents"));
+	
 	initializeRandom(*props, comm);
 	Gsafety=0;
-	TransCost=15;
+	TransCost=repast::strToInt(props->getProperty("public.transport.cost"));
+	TransCostIncrease=((double)repast::strToInt(props->getProperty("public.transport.cost.increase")))/100;
    	repast::Point<double> origin(-300,-300);
    	repast::Point<double> extent(601, 601);
-    
+    newAgent=floor(1/(((double)EndcountOfAgents-(double)countOfAgents)/((double)stopAt-(double)timeinsteps)));
     	repast::GridDimensions gd(origin, extent);
     
 	//sets to run on just 1 core
@@ -37,8 +42,6 @@ CommuterModel::CommuterModel(std::string propsFile, int argc, char** argv, boost
     	discreteSpace = new repast::SharedDiscreteSpace<Commuter, repast::WrapAroundBorders, 		repast::SimpleAdder<Commuter> >("AgentDiscreteSpace", gd, processDims, 2, comm);
     
     	discreteInfSpace = new repast::SharedDiscreteSpace<Infrastructure, repast::WrapAroundBorders, repast::SimpleAdder<Infrastructure> >("AgentDiscreteSpace", gd, processDims, 2, comm);
-	
-   	// std::cout << "RANK " << repast::RepastProcess::instance()->rank() << " BOUNDS: " << discreteSpace->bounds().origin() << " " << discreteSpace->bounds().extents() << std::endl;
     
    	context.addProjection(discreteSpace);
     	Infcontext.addProjection(discreteInfSpace);
@@ -59,6 +62,15 @@ CommuterModel::CommuterModel(std::string propsFile, int argc, char** argv, boost
 
 	DataSource_AgentTotalPTrans* AgentTotalPTrans_DataSource = new DataSource_AgentTotalPTrans(&context);
 	builder.addDataSource(createSVDataSource("Total Pub Transport", AgentTotalPTrans_DataSource, std::plus<int>()));
+
+	DataSource_AgentAvgHealth* AgentAvgHealth_DataSource = new DataSource_AgentAvgHealth(&context);
+	builder.addDataSource(createSVDataSource("Average Health", AgentAvgHealth_DataSource, std::plus<int>()));
+	
+	DataSource_AgentAvgCAbility* AgentAvgCAbility_DataSource = new DataSource_AgentAvgCAbility(&context);
+	builder.addDataSource(createSVDataSource("Average Cycle Ability", AgentAvgCAbility_DataSource, std::plus<int>()));
+
+	DataSource_AgentAvgSafe* AgentAvgSafe_DataSource = new DataSource_AgentAvgSafe(&context);
+	builder.addDataSource(createSVDataSource("Average Safety Perception", AgentAvgSafe_DataSource, std::plus<int>()));
     
 	// Use the builder to create the data set
 	agentValues = builder.createDataSet();
@@ -80,14 +92,16 @@ void CommuterModel::init(){
 	int rank = repast::RepastProcess::instance()->rank();
 	timeinsteps=0;
 	for(int i = 0; i < countOfAgents; i++){ 
-		double dist = repast::Random::instance()->getGenerator("lognor")->next();
-		double angle = repast::Random::instance()->nextDouble()*2*PI;
-       		repast::Point<int> initialLocation(dist*300*sin(angle),dist*300*cos(angle));	//Distributing agents randomly
+		double newRand =  repast::Random::instance()->getGenerator("duni")->next();
+		boost::math::beta_distribution<> vars(1.1,3);
+		double dist = boost::math::quantile(vars,newRand)*300;
+		double angle =  repast::Random::instance()->getGenerator("duni")->next()*2*PI;
+       		repast::Point<int> initialLocation(dist*sin(angle),dist*cos(angle));	//Distributing agents randomly
 		repast::AgentId id(i, rank, 0);
 		id.currentRank(rank);
 		Commuter* agent = new Commuter(id,initialCar,initialBike,initialWalk,initialPTrans);
 		context.addAgent(agent);
-       		discreteSpace->moveTo(id, initialLocation);
+       	discreteSpace->moveTo(id, initialLocation);
 	}
 
 	/*for(int i = 0; i < countOfInfAgents; i++){ 
@@ -102,26 +116,38 @@ void CommuterModel::init(){
 
 
 
-void CommuterModel::doSomething(){
-	timeinsteps++;
+void CommuterModel::commute(){
 	int TransMode;	
 	NumCar=0;
 	NumCycle=0;
 	getGSafe();
 	std::vector<Commuter*> agents;
+	std::vector<Infrastructure*> Infagents;
+	//Adding new agents if needed
+	if(((double)timeinsteps+1.0)/newAgent==ceil(((double)timeinsteps+1.0)/newAgent))
+	{
+		addAgents(1);
+	}
+
+
+
+
 	context.selectAgents(repast::SharedContext<Commuter>::LOCAL, countOfAgents, agents);
 	std::vector<Commuter*>::iterator it = agents.begin();
 	while(it != agents.end()){
         (*it)->Travel(Gsafety, TransCost,&context, discreteSpace, discreteInfSpace);
 		it++;
     	}
-
+	NumCycle=0;
+	NumWalk=0;
+	NumCar=0;
+	NumPTrans=0;
  	it = agents.begin();
    	while(it != agents.end()){  //Need similar for recivieing infrastructure information
 		TransMode= (*it)->getMode();
 		if(TransMode ==1)
 		{
-			std::cout<<"just another cyleist: " << (*it)->getId() << " at "<< timeinsteps << std::endl;
+			std::cout<<"just another cycleist: " << (*it)->getId() << " at "<< timeinsteps << std::endl;
 			NumCycle++;
 		}
 		else if(TransMode==0)
@@ -131,34 +157,35 @@ void CommuterModel::doSomething(){
 		}
 		else if(TransMode==2)
 		{
-			std::cout<<"just a walking dude, dude " << (*it)->getId() << " at "<< timeinsteps << std::endl;
+			std::cout<<"just a walking " << (*it)->getId() << " at "<< timeinsteps << std::endl;
+			NumWalk++;
 		}
 		else if(TransMode==3)
 		{
-			std::cout<<"just riding public transport over here boss: " << (*it)->getId() << " at "<< timeinsteps << std::endl;
-		}
-		else
-		{
-			//std::cout<<"This is embarassing I'm not going to work at all: " << (*it)->getId() << " at "<< timeinsteps << std::endl;
+			std::cout<<"just riding public transport: " << (*it)->getId() << " at "<< timeinsteps << std::endl;
+			NumPTrans++;
 		}
 		it++;
     }
 
-	/*No Longer need to move since 'movement' is done by query
-    it = agents.begin();
-    while(it != agents.end()){
-		(*it)->move(discreteSpace);
-		it++;
-    }*/
+	//Retriving infrastructure information
+	Infcontext.selectAgents(repast::SharedContext<Infrastructure>::LOCAL, countOfInfAgents, Infagents);
+	std::vector<Infrastructure*>::iterator Infit = Infagents.begin();
+	while(Infit != Infagents.end()) //what info needs to be retrived though? cost maybe?
+	{
+		
 
+
+	}
 	discreteSpace->balance();
-  
+  	timeinsteps++;
 }
 
 void CommuterModel::initSchedule(repast::ScheduleRunner& runner){
 
-	runner.scheduleEvent(1, 1, repast::Schedule::FunctorPtr(new repast::MethodFunctor<CommuterModel> (this, &CommuterModel::doSomething)));
-
+	runner.scheduleEvent(0, 1, repast::Schedule::FunctorPtr(new repast::MethodFunctor<CommuterModel> (this, &CommuterModel::commute)));
+	runner.scheduleEvent(11, 12, repast::Schedule::FunctorPtr(new repast::MethodFunctor<CommuterModel> (this, &CommuterModel::IncreaseTransCost)));	//increasing public transport cost each year
+	runner.scheduleEvent(0, 1, repast::Schedule::FunctorPtr(new repast::MethodFunctor<CommuterModel> (this, &CommuterModel::recordResults)));
 	runner.scheduleStop(stopAt);
 
 
@@ -170,16 +197,6 @@ runner.scheduleEndEvent(repast::Schedule::FunctorPtr(new repast::MethodFunctor<r
 	
 }
 
-void CommuterModel::recordResults(){
-	if(repast::RepastProcess::instance()->rank() == 0){
-		props->putProperty("Result","Passed");
-		std::vector<std::string> keyOrder;
-		keyOrder.push_back("RunNumber");
-		keyOrder.push_back("stop.at");
-		keyOrder.push_back("Result");
-		props->writeToSVFile("./output/results.csv", keyOrder);
-    }
-}
 
 int CommuterModel::CalcCosts(){
 	int Cost = NumCar;
@@ -188,24 +205,78 @@ int CommuterModel::CalcCosts(){
 
 }
 
-void CommuterModel::getGSafe()
+void CommuterModel::getGSafe()	//Global saftey is taken form the average saftey of all agents in the model
 {
+	double SafeTotal=0;
 	std::vector<Commuter*> agents;
 	context.selectAgents(repast::SharedContext<Commuter>::LOCAL, countOfAgents, agents);
 	std::vector<Commuter*>::iterator Git = agents.begin();
 	while(Git != agents.end()){
-		if(Gsafety==0)
-		{
-			Gsafety =(*Git)->getSafe();
-		}
-		else
-		{
-        		Gsafety = (Gsafety + (*Git)->getSafe())/2;
-		}
+		SafeTotal = (SafeTotal + (*Git)->getSafe());
 		Git++;
    	 }
+	Gsafety=SafeTotal/countOfAgents;
 
 }
+
+void CommuterModel::addAgents(int NumAgents) //function to add agents to the model
+{
+	int rank = repast::RepastProcess::instance()->rank();
+	for(int i = 0; i < NumAgents; i++){ 
+		double newRand =  repast::Random::instance()->getGenerator("duni")->next();
+		boost::math::beta_distribution<> vars(1.1,3);
+		double dist = boost::math::quantile(vars,newRand)*300;
+		double angle =  repast::Random::instance()->getGenerator("duni")->next()*2*PI;
+       	repast::Point<int> initialLocation(dist*sin(angle),dist*cos(angle));	//Distributing agents randomly
+		repast::AgentId id(countOfAgents, rank, 0);
+		id.currentRank(rank);
+		Commuter* agent = new Commuter(id,NumCar/countOfAgents,NumCycle/countOfAgents,NumWalk/countOfAgents,NumPTrans/countOfAgents);
+		context.addAgent(agent);
+       	discreteSpace->moveTo(id, initialLocation);
+		countOfAgents++;
+	}
+
+
+}
+
+void CommuterModel::IncreaseTransCost()
+{
+	TransCost=TransCost*(1+TransCostIncrease);
+} 
+
+void CommuterModel::recordResults(){
+		std::string seperator=";";
+		std::vector<std::string> key = {"Month","P Transport Cost"};
+		std::string fileName="./output/Modelresults.csv";
+		 bool writeHeader =  !boost::filesystem::exists(fileName);
+ 		 std::ofstream outFile;
+
+  		outFile.open(fileName.c_str(), std::ios::app);
+		if(writeHeader)
+		{
+    		std::vector<std::string>::iterator keys      = key.begin();
+    		std::vector<std::string>::iterator keysEnd   = key.end();
+
+    		int i = 1;
+    		while(keys != keysEnd){
+     			 outFile << *keys << (i!=key.size() ? seperator:"");
+     			 keys++;
+      			 i++;
+    		}
+    outFile << std::endl;
+		}
+
+    outFile << std::fixed << timeinsteps << (seperator);
+	 outFile << std::fixed << TransCost	<<("");
+
+  outFile << std::endl;
+
+  outFile.close();
+}
+
+//Data source classes
+
+
 
 DataSource_AgentTotalCars::DataSource_AgentTotalCars(repast::SharedContext<Commuter>* car) : context(car){ }
 
@@ -269,6 +340,78 @@ int DataSource_AgentTotalPTrans::getData(){
 		iter++;
 	}
 	return sum;
+}
+
+DataSource_AgentAvgHealth::DataSource_AgentAvgHealth(repast::SharedContext<Commuter>* Health) : context(Health){ }
+
+double DataSource_AgentAvgHealth::getData(){
+	double sum = 0;
+	double totalhealth=0;
+	double AvgHealth;
+	repast::SharedContext<Commuter>::const_local_iterator iter    = context->localBegin();
+	repast::SharedContext<Commuter>::const_local_iterator iterEnd = context->localEnd();
+	while( iter != iterEnd) {
+		totalhealth =totalhealth + (*iter)->getHealth();	
+		sum++;
+		iter++;
+	}
+	if(sum!=0)
+	{
+		AvgHealth=totalhealth/(double)sum;
+	}
+	else
+	{
+		AvgHealth=0;
+	}
+	return AvgHealth;
+}
+
+DataSource_AgentAvgCAbility::DataSource_AgentAvgCAbility(repast::SharedContext<Commuter>* CAbility) : context(CAbility){ }
+
+double DataSource_AgentAvgCAbility::getData(){
+	double sum = 0;
+	double totalca=0;
+	double AvgCAbility;
+	repast::SharedContext<Commuter>::const_local_iterator iter    = context->localBegin();
+	repast::SharedContext<Commuter>::const_local_iterator iterEnd = context->localEnd();
+	while( iter != iterEnd) {
+		totalca =totalca+(*iter)->getCycleAbility();
+		sum++;
+		iter++;
+	}
+	if(sum!=0)
+	{
+		AvgCAbility=totalca/sum;
+	}
+	else
+	{
+		AvgCAbility=0;
+	}
+	return AvgCAbility;
+}
+
+DataSource_AgentAvgSafe::DataSource_AgentAvgSafe(repast::SharedContext<Commuter>* safe) : context(safe){ }
+
+double DataSource_AgentAvgSafe::getData(){
+	double sum = 0;
+	double totalsafe=0;
+	double AvgSafe;
+	repast::SharedContext<Commuter>::const_local_iterator iter    = context->localBegin();
+	repast::SharedContext<Commuter>::const_local_iterator iterEnd = context->localEnd();
+	while( iter != iterEnd) {
+		totalsafe =totalsafe+(*iter)->getSafe();	
+		sum++;
+		iter++;
+	}
+	if(sum!=0)
+	{
+		AvgSafe=totalsafe/sum;
+	}
+	else
+	{
+		AvgSafe=0;
+	}
+	return AvgSafe;
 }
 
 

@@ -19,11 +19,14 @@ private:
     double           	ProvVar=-1;
 	double				OldProvVar; //<-might not need now tbh
 	int					InfType;
+	double				InfCost;
+	double				CostPerAgent;
 	
 public:
     //Infrastructure(repast::AgentId id);
 	Infrastructure(){}
-    Infrastructure(repast::AgentId id, int InfType, int newCap, int newMaxCap, int newReach, double newPVar);
+	Infrastructure(repast::AgentId id, int newInfType, int InfTempate, int newReach,int Pvar);
+    Infrastructure(repast::AgentId id, int newInfType, int newCap, int newMaxCap, int newReach, double newPVar,double newInfCost,double newCostPerAgent);
 	
     ~Infrastructure();
 	
@@ -39,7 +42,7 @@ public:
 	int getInfType(){								 return InfType;}
 	
     /* Setter */
-    void set(int currentRank, int InfType,int newCap, int newMaxCap, int newReach, double newPVar);
+    void set(int currentRank, int newInfType,int newCap, int newMaxCap, int newReach, double newPVar, double newInfCost,double	newCostPerAgent);
 	
     /* Actions */
     int use(repast::SharedDiscreteSpace<Infrastructure, repast::WrapAroundBorders, repast::SimpleAdder<Infrastructure> >* space);    

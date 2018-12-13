@@ -20,12 +20,17 @@
 class CommuterModel{
 	int stopAt;
 	int countOfAgents;
+	int EndcountOfAgents;
 	int countOfInfAgents;
-	int timeinsteps;
+	int timeinsteps=0;
 	double Gsafety;
 	int NumCycle;
 	int NumCar;
-	int TransCost;
+	int NumWalk;
+	int NumPTrans;
+	double newAgent=0;
+	double TransCost;
+	double TransCostIncrease;
 	repast::Properties* props;
 	repast::SharedContext<Commuter> context;
 	repast::SharedContext<Infrastructure> Infcontext;
@@ -40,13 +45,12 @@ public:
 	CommuterModel(std::string propsFile, int argc, char** argv, boost::mpi::communicator* comm);
 	~CommuterModel();
 	void init();
-	void requestAgents();
-	void cancelAgentRequests();
-	void removeLocalAgents();
-	void doSomething();
+	void addAgents(int NumAgents);
+	void commute();
 	void initSchedule(repast::ScheduleRunner& runner);
 	void recordResults();
-	int getTransCost() {return TransCost;};
+	void IncreaseTransCost();
+	double getTransCost() {return TransCost;};
 private:
 	int CalcCosts();
 	void getGSafe();
@@ -89,6 +93,33 @@ private:
 public:
 	DataSource_AgentTotalPTrans(repast::SharedContext<Commuter>* PTrans);
 	int getData();
+};
+
+class DataSource_AgentAvgHealth : public repast::TDataSource<double>{
+private:
+	repast::SharedContext<Commuter>* context;
+	
+public:
+	DataSource_AgentAvgHealth(repast::SharedContext<Commuter>* Health);
+	double getData();
+};
+
+class DataSource_AgentAvgCAbility : public repast::TDataSource<double>{
+private:
+	repast::SharedContext<Commuter>* context;
+	
+public:
+	DataSource_AgentAvgCAbility(repast::SharedContext<Commuter>* CAbility);
+	double getData();
+};
+
+class DataSource_AgentAvgSafe : public repast::TDataSource<double>{
+private:
+	repast::SharedContext<Commuter>* context;
+	
+public:
+	DataSource_AgentAvgSafe(repast::SharedContext<Commuter>* safe);
+	double getData();
 };
 
 

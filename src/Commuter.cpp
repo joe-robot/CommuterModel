@@ -8,7 +8,7 @@
 
 #define PI 3.141592653
 
-Commuter::Commuter(repast::AgentId id, double InitialCar,double InitialBike, double InitialWalk, double InitialPTrans ): id_(id),safety(repast::Random::instance()->nextDouble()), thresh(((repast::Random::instance()->nextDouble())/2)+0.5)
+Commuter::Commuter(repast::AgentId id, double InitialCar,double InitialBike, double InitialWalk, double InitialPTrans ): id_(id), thresh(((repast::Random::instance()->nextDouble())/2)+0.5)
 {
 
 	//Initialising agent trasport mode randomly
@@ -38,7 +38,23 @@ Commuter::Commuter(repast::AgentId id, double InitialCar,double InitialBike, dou
 	//Initialising the Cycle Ability variable with a uniform distribution
 	CycleAbility= repast::Random::instance()->getGenerator("duni")->next();	
 	//Intialising the Economic Position using a uniform distribution (look up research in this I feel like it should be mid shifted in the sheffield region as more of average wealth than low income)
-	EconomicPosition=  repast::Random::instance()->getGenerator("duni")->next();
+	if(TransMode==0)
+	{
+		EconomicPosition=  0.15+(repast::Random::instance()->getGenerator("duni")->next())*(0.85);
+	}
+	else if(TransMode==3)
+	{
+		EconomicPosition=  0.1+(repast::Random::instance()->getGenerator("duni")->next())*(0.85);
+	}
+	else
+	{
+		EconomicPosition=  (repast::Random::instance()->getGenerator("duni")->next())*(0.9);
+	}
+
+	//Intialising Saftey Perception making it skewed to 0.5
+	newRand =  repast::Random::instance()->getGenerator("duni")->next();
+	boost::math::beta_distribution<> vars2(3,2.1);
+	safety = boost::math::quantile(vars2,newRand);
 }
 
 Commuter::Commuter(repast::AgentId id, int newTravelDist, double newSafe, double newThresh, int newMode, double newHealth, double newCycleAbility, double newEconomicPosition): id_(id), TravelDist(newTravelDist),safety(newSafe), thresh(newThresh), TransMode(newMode), Health(newHealth), CycleAbility(newCycleAbility), EconomicPosition(newEconomicPosition){ }
@@ -57,7 +73,7 @@ void Commuter::set(int currentRank,int newTravelDist, double newSafe, double new
 	EconomicPosition=newEconomicPosition;
 }
 
-int Commuter::ChooseMode(int TransCost){
+int Commuter::ChooseMode(double TransCost){
 	double TimeCar;
 	double TimeBike;
 	double TimeWalk;
@@ -70,6 +86,10 @@ int Commuter::ChooseMode(int TransCost){
 	double BSafeP;
 	double WSafeP;
 	double PTSafeP;
+	double CComfP;
+	double BComfP;
+	double WComfP;
+	double PTComfP;
 	double Cyclethresh;
 	bool incBike;
 	bool incCar;
@@ -84,9 +104,11 @@ int Commuter::ChooseMode(int TransCost){
 	int CostP;
 	int SafeP;
 	int TimeP;
+	int ComfP;
+	int WeightP;
 
 	//Calculating probability form habit (more likely to to stick to current transport method)
-	Habit=(-1*exp(-0.2*TransModeUsage)+1)*0.5;
+	Habit=0.1+(-1*exp(-0.2*TransModeUsage)+1)*0.4;
 
 	thresh= (1- exp(-0.01*TravelDist)*Health);
 	if(StartTransMode==1)	//Making the threshold lower if in the habit of cycling, only effecting it by maximum 10%
@@ -97,7 +119,7 @@ int Commuter::ChooseMode(int TransCost){
 
 
 
-	if(safety>thresh&&EconomicPosition>0.1&&CycleAbility!=0)
+	if(safety>thresh&&CycleAbility!=0)
 	{
 		incBike=1;
 	}
@@ -105,7 +127,7 @@ int Commuter::ChooseMode(int TransCost){
 	{
 		incBike=0;
 	}
-	if(EconomicPosition>0.2)
+	if(EconomicPosition>0.15)
 	{
 		incCar=1;
 	}
@@ -126,12 +148,12 @@ int Commuter::ChooseMode(int TransCost){
 	if(TravelDist<50)	//Within 5 Km (congestion areas)
 	{
 		TimeCar= 1*TravelDist;
-		TimePTrans = 1.5*TravelDist;
+		TimePTrans = 2*TravelDist;
 	}
 	else			//Outside of congetion areas
 	{
 		TimeCar= 0.5*(TravelDist-50)+50;	//Faster when out of 5Km radius by half (60mph)
-		TimePTrans= 50*1.5+0.4*(TravelDist-50) +	(1.1*exp(-0.001*(TravelDist-50))*TravelDist);						//Gradual decrease in time taken per distance
+		TimePTrans= 50*2+0.4*(TravelDist-50) +	(1.6*exp(-0.001*(TravelDist-50))*TravelDist);						//Gradual decrease in time taken per distance
 	}
 
 	TimeBike = 1.5*TravelDist;
@@ -145,72 +167,86 @@ int Commuter::ChooseMode(int TransCost){
 	double CycleSafety=safety;
 	double WalkSafety=safety;
 	double CarSafety=0.99;
-	double PTransSafety=1;
+	double PTransSafety=0.99;
 
 	CSafeP= (incCar*CarSafety)/((incCar*CarSafety)+(incPTrans*PTransSafety)+(incBike*CycleSafety)+(WalkSafety));
 	BSafeP= (incBike*CycleSafety)/((incCar*CarSafety)+(incPTrans*PTransSafety)+(incBike*CycleSafety)+(WalkSafety));
 	WSafeP= (WalkSafety)/((incCar*CarSafety)+(incPTrans*PTransSafety)+(incBike*CycleSafety)+(WalkSafety));
 	PTSafeP= (incPTrans*PTransSafety)/((incCar*CarSafety)+(incPTrans*PTransSafety)+(incBike*CycleSafety)+(WalkSafety));
 	
-	double CarCost = 2500+TravelDist*0.1*48*5*2;//based on cost of car and distance
+	double CarCost = 1500+TravelDist*0.09*48*5*2;//based on cost of cheap car and insurance and distance
 	double WalkCost = 1;
 	if(TravelDist<50)		//In 5km range a sheffield season pass is used so flat rate not based on distance
 	{
-		PTransCost = TransCost*48; ///Based on distance
+		PTransCost = TransCost*48; ///Based on sheffield weekly pass
 	}
 	else
 	{
-		PTransCost = TransCost*48+(TravelDist-50)*TransCost*48; //need to include rising price with distance
+		PTransCost = TransCost*48+(TravelDist-50)*(TransCost)*48; //rising price with distance
 	}
 	
 	double CCostP= ((incCar/CarCost)/((incCar/CarCost)+(incPTrans/PTransCost)+(incBike/CycleCost)+(1/ WalkCost)));
 	double BCostP= ((incBike/CycleCost)/((incCar/CarCost)+(incPTrans/PTransCost)+(incBike/CycleCost)+(1/ WalkCost)));
 	double WCostP= ((1/ WalkCost)/((incCar/CarCost)+(incPTrans/PTransCost)+(incBike/CycleCost)+(1/ WalkCost)));
 	double PTCostP= ((incPTrans/PTransCost)/((incCar/CarCost)+(incPTrans/PTransCost)+(incBike/CycleCost)+(1/WalkCost)));
+
+	double CycleComf=	0.4;	//Comfort and conveninece provided by each transport method
+	double WalkComf =	0.4;
+	double PTransComf = 0.7;
+	double CarComf= 0.95;
+
+	CComfP =(incCar*CarComf)/((incCar*CarComf)+(incPTrans*PTransComf)+(incBike*CycleComf)+(WalkComf));
+	BComfP =(incCar*CycleComf)/((incCar*CarComf)+(incPTrans*PTransComf)+(incBike*CycleComf)+(WalkComf));
+	WComfP =(incCar*WalkComf)/((incCar*CarComf)+(incPTrans*PTransComf)+(incBike*CycleComf)+(WalkComf));
+	PTComfP =(incCar*PTransComf)/((incCar*CarComf)+(incPTrans*PTransComf)+(incBike*CycleComf)+(WalkComf));
+	
 	
 	//Calculating the probabilities of choosing certain types of transport
-	if(EconomicPosition<0.3) //if lower 30% of money is more important factor in the decision
+	if(EconomicPosition<0.3) //for lower 30%, money is more important factor in the decision
 	{
 		CostP = 4;
 		SafeP = 3;
 		TimeP = 3;
+		ComfP = 2;
 	}
-	else
+	else	//otherwise time and comfort is seen as a more important factor
 	{
 		CostP = 1;
 		SafeP = 4;
 		TimeP = 5;	
+		ComfP = 3;
+		WeightP=CostP+SafeP+TimeP+ComfP;
 	}
 
 	if(StartTransMode==0)
 	{
-		CarP=((CostP*CCostP+SafeP*CSafeP+TimeP*CTimeP)/10)*(1-Habit)+Habit;
-		CycleP=((CostP*BCostP+SafeP*BSafeP+TimeP*BTimeP)/10)*(1-Habit);
-		WalkP=((CostP*WCostP+SafeP*WSafeP+TimeP*WTimeP)/10)*(1-Habit);
-		PTransP=((CostP*PTCostP+SafeP*PTSafeP+TimeP*PTTimeP)/10)*(1-Habit);
+		CarP=((CostP*CCostP+SafeP*CSafeP+TimeP*CTimeP+ComfP*CComfP)/WeightP)*(1-Habit)+Habit;
+		CycleP=((CostP*BCostP+SafeP*BSafeP+TimeP*BTimeP+ComfP*BComfP)/WeightP)*(1-Habit);
+		WalkP=((CostP*WCostP+SafeP*WSafeP+TimeP*WTimeP+ComfP*WComfP)/WeightP)*(1-Habit);
+		PTransP=((CostP*PTCostP+SafeP*PTSafeP+TimeP*PTTimeP+ComfP*PTComfP)/WeightP)*(1-Habit);
 	}
 	else if(StartTransMode==1)
 	{
-		CarP=((CostP*CCostP+SafeP*CSafeP+TimeP*CTimeP)/10)*(1-Habit);
-		CycleP=((CostP*BCostP+SafeP*BSafeP+TimeP*BTimeP)/10)*(1-Habit)+Habit;
-		WalkP=((CostP*WCostP+SafeP*WSafeP+TimeP*WTimeP)/10)*(1-Habit);
-		PTransP=((CostP*PTCostP+SafeP*PTSafeP+TimeP*PTTimeP)/10)*(1-Habit);
+		CarP=((CostP*CCostP+SafeP*CSafeP+TimeP*CTimeP+ComfP*CComfP)/WeightP)*(1-Habit);
+		CycleP=((CostP*BCostP+SafeP*BSafeP+TimeP*BTimeP+ComfP*BComfP)/WeightP)*(1-Habit)+Habit;
+		WalkP=((CostP*WCostP+SafeP*WSafeP+TimeP*WTimeP+ComfP*WComfP)/WeightP)*(1-Habit);
+		PTransP=((CostP*PTCostP+SafeP*PTSafeP+TimeP*PTTimeP+ComfP*PTComfP)/WeightP)*(1-Habit);
 	}
 	else if(StartTransMode==2)
 	{
-		CarP=((CostP*CCostP+SafeP*CSafeP+TimeP*CTimeP)/10)*(1-Habit);
-		CycleP=((CostP*BCostP+SafeP*BSafeP+TimeP*BTimeP)/10)*(1-Habit);
-		WalkP=((CostP*WCostP+SafeP*WSafeP+TimeP*WTimeP)/10)*(1-Habit)+Habit;
-		PTransP=((CostP*PTCostP+SafeP*PTSafeP+TimeP*PTTimeP)/10)*(1-Habit);
+		CarP=((CostP*CCostP+SafeP*CSafeP+TimeP*CTimeP+ComfP*CComfP)/WeightP)*(1-Habit);
+		CycleP=((CostP*BCostP+SafeP*BSafeP+TimeP*BTimeP+ComfP*BComfP)/WeightP)*(1-Habit);
+		WalkP=((CostP*WCostP+SafeP*WSafeP+TimeP*WTimeP+ComfP*WComfP)/WeightP)*(1-Habit)+Habit;
+		PTransP=((CostP*PTCostP+SafeP*PTSafeP+TimeP*PTTimeP+ComfP*PTComfP)/WeightP)*(1-Habit);
 	}
 	else if(StartTransMode==3)
 	{
-		CarP=((CostP*CCostP+SafeP*CSafeP+TimeP*CTimeP)/10)*(1-Habit);
-		CycleP=((CostP*BCostP+SafeP*BSafeP+TimeP*BTimeP)/10)*(1-Habit);
-		WalkP=((CostP*WCostP+SafeP*WSafeP+TimeP*WTimeP)/10)*(1-Habit);
-		PTransP=((CostP*PTCostP+SafeP*PTSafeP+TimeP*PTTimeP)/10)*(1-Habit)+Habit;
+		CarP=((CostP*CCostP+SafeP*CSafeP+TimeP*CTimeP+ComfP*CComfP)/WeightP)*(1-Habit);
+		CycleP=((CostP*BCostP+SafeP*BSafeP+TimeP*BTimeP+ComfP*BComfP)/WeightP)*(1-Habit);
+		WalkP=((CostP*WCostP+SafeP*WSafeP+TimeP*WTimeP+ComfP*WComfP)/WeightP)*(1-Habit);
+		PTransP=((CostP*PTCostP+SafeP*PTSafeP+TimeP*PTTimeP+ComfP*PTComfP)/WeightP)*(1-Habit)+Habit;
 	}
-		
+
 
 	double TransChoice=  repast::Random::instance()->getGenerator("duni")->next();
 
@@ -231,7 +267,7 @@ int Commuter::ChooseMode(int TransCost){
 		TransMode=3;
 	}
 
-	if(StartTransMode==TransMode)
+	if(StartTransMode==TransMode)	//if chosen same transmode again add to transmode usage variable
 	{
 		TransModeUsage++;
 	}
@@ -240,10 +276,9 @@ int Commuter::ChooseMode(int TransCost){
     return TransMode;
 	}
 
-void Commuter::Travel(double Gsafety,int TransCost,repast::SharedContext<Commuter>* context, repast:: SharedDiscreteSpace<Commuter, repast::WrapAroundBorders, repast::SimpleAdder<Commuter> >* space, repast:: SharedDiscreteSpace<Infrastructure, repast::WrapAroundBorders, repast::SimpleAdder<Infrastructure> >* Infspace){
+void Commuter::Travel(double Gsafety,double TransCost,repast::SharedContext<Commuter>* context, repast:: SharedDiscreteSpace<Commuter, repast::WrapAroundBorders, repast::SimpleAdder<Commuter> >* space, repast:: SharedDiscreteSpace<Infrastructure, repast::WrapAroundBorders, repast::SimpleAdder<Infrastructure> >* Infspace){
 	int InfReach = 0;
 	int InfArea=0;
-	timestep++;
     std::vector<Commuter*> agentsToPlay;
     std::vector<Infrastructure*> Infrastruct;
     std::vector<int> agentLoc;
@@ -379,7 +414,7 @@ void Commuter::Travel(double Gsafety,int TransCost,repast::SharedContext<Commute
 			else if((*Infrastr)->getInfType()==1)
 			{
 				InfinRange.push_back(*Infrastr);
-				CycleCost=CycleCost-((*Infrastr)->getProvVar()*48);
+				CycleCost=CycleCost-((*Infrastr)->getProvVar()*12);
 			}
 			else if((*Infrastr)->getInfType()==2)
 			{
@@ -388,7 +423,14 @@ void Commuter::Travel(double Gsafety,int TransCost,repast::SharedContext<Commute
 					if(Health!=0)
 					{
 						InfinRange.push_back(*Infrastr);
-						Health=Health*1.01;
+						if(Health<1)
+						{
+							Health=Health*(*Infrastr)->getProvVar();
+							if(Health>1)
+							{
+								Health=1;
+							}
+						}
 					}
 				}
 			}
@@ -397,8 +439,11 @@ void Commuter::Travel(double Gsafety,int TransCost,repast::SharedContext<Commute
 				if(repast::Random::instance()->getGenerator("duni")->next()<0.1)
 				{
 					InfinRange.push_back(*Infrastr);
-					CycleAbility=CycleAbility*1.01;
-					if(CycleAbility==0)
+					if(CycleAbility!=1)
+					{
+						CycleAbility=CycleAbility*(*Infrastr)->getProvVar();;
+					}
+					if(CycleAbility<0.05)
 					{
 						CycleAbility=0.05;
 					}
@@ -433,9 +478,28 @@ void Commuter::Travel(double Gsafety,int TransCost,repast::SharedContext<Commute
 			(*Infrastr)-> use(Infspace);
 			Infrastr++;
 		}
+		if(Health<=1)
+		{
+			Health=Health*1.04;	//Health increase if chosen cycling
+			if(Health>1)
+			{
+				Health=1;
+			}
+		}
+	}
+	if(TransMode==2)
+	{
+		if(Health<=1)
+		{
+			Health=Health*1.02;	//Health increas if chosen walking
+			if(Health>1)
+			{
+				Health=1;
+			}
+		}
 	}
 
-    
+    timestep++;
 }
 
 
