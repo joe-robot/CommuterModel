@@ -23,7 +23,7 @@ private:
 	int TravelDist;
     int timestep = 0;
 	int TransModeUsage=0;
-	std::vector<Infrastructure*> InfinRange;
+	std::vector<Infrastructure*> InfinRange={};
 
 public:
     Commuter(repast::AgentId id,double InitialCar,double InitialBike, double InitialWalk, double InitialPTrans);
@@ -38,7 +38,7 @@ public:
 
     /* Getters specific to this kind of Agent */
     double getSafe() { return safety; }
-    double getThresh() { return thresh; }
+    //double getThresh() { return thresh; }
     int getMode() { return TransMode; }
 	double getHealth() { return Health;}
 	double getCycleAbility() {return CycleAbility;}

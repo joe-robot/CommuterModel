@@ -30,9 +30,21 @@ Commuter::Commuter(repast::AgentId id, double InitialCar,double InitialBike, dou
 		TransMode=3;
 	}
 	TransModeUsage=1;
-	//Initialising health variable using uniform distribution
+	//Initialising health variable using beta distribution and cycle abiliity
 	double newRand =  repast::Random::instance()->getGenerator("duni")->next();
 	boost::math::beta_distribution<> vars(6,2);
+	if(TransMode==1) //if chosen cycling health generally higher and cyclign ability better
+	{
+		CycleAbility= 0.2+(repast::Random::instance()->getGenerator("duni")->next())*0.8;
+		Health = 0.2+boost::math::quantile(vars,newRand)*0.8;	
+	}
+	else
+	{
+		CycleAbility= (repast::Random::instance()->getGenerator("duni")->next())*0.9;
+		Health=boost::math::quantile(vars,newRand)*0.8;
+	}
+
+
 	Health = boost::math::quantile(vars,newRand);
 
 	//Initialising the Cycle Ability variable with a uniform distribution
@@ -51,7 +63,7 @@ Commuter::Commuter(repast::AgentId id, double InitialCar,double InitialBike, dou
 		EconomicPosition=  (repast::Random::instance()->getGenerator("duni")->next())*(0.9);
 	}
 
-	//Intialising Saftey Perception making it skewed to 0.5
+	//Intialising safety Perception making it skewed to 0.5
 	newRand =  repast::Random::instance()->getGenerator("duni")->next();
 	boost::math::beta_distribution<> vars2(3,2.1);
 	safety = boost::math::quantile(vars2,newRand);
@@ -108,12 +120,12 @@ int Commuter::ChooseMode(double TransCost){
 	int WeightP;
 
 	//Calculating probability form habit (more likely to to stick to current transport method)
-	Habit=0.1+(-1*exp(-0.2*TransModeUsage)+1)*0.4;
+	Habit=0.1+(-1*exp(-0.2*TransModeUsage)+1)*0.3;
 
 	thresh= (1- exp(-0.01*TravelDist)*Health);
 	if(StartTransMode==1)	//Making the threshold lower if in the habit of cycling, only effecting it by maximum 10%
 	{
-		thresh= (1- exp(-0.01*TravelDist)*Health)-(Habit*(10/50));
+		thresh= (1- exp(-0.01*TravelDist)*Health)-(Habit*(10/40));
 	}
 	Cyclethresh = thresh * CycleAbility;
 
@@ -205,7 +217,7 @@ int Commuter::ChooseMode(double TransCost){
 	if(EconomicPosition<0.3) //for lower 30%, money is more important factor in the decision
 	{
 		CostP = 4;
-		SafeP = 3;
+		SafeP = 4;
 		TimeP = 3;
 		ComfP = 2;
 	}
@@ -290,7 +302,9 @@ void Commuter::Travel(double Gsafety,double TransCost,repast::SharedContext<Comm
 	double infSafesum=0;
 	double infRSafesum=0;
 	double infReachsum=0;
-	int CommuteArea=0;
+	double CommuteArea=0;
+	double InfraSafety=safety;
+	double SocialSafety=safety;
 	TravelDist=CommuteDistance;
     repast::Moore2DGridQuery<Commuter> moore2DQuery(space);
     moore2DQuery.query(center, 3, true, agentsToPlay);
@@ -303,27 +317,7 @@ void Commuter::Travel(double Gsafety,double TransCost,repast::SharedContext<Comm
     int numInf=0;
     int XSearch[2]={};
     int YSearch[2]={};
-    std::vector<Commuter*>::iterator agentToPlay = agentsToPlay.begin();
-    while(agentToPlay != agentsToPlay.end()){
-        std::vector<int> otherLoc;
-        space->getLocation((*agentToPlay)->getId(), otherLoc);
-        repast::Point<int> otherPoint(otherLoc);
-        
-        safetyPayoff = safetyPayoff + ((*agentToPlay)->getSafe());
-        numAgentsPlay++;
-        agentToPlay++;
-    }
-
-
-	if(numAgentsPlay!=0)
-	{
-    		safety = safety*0.6+0.3*(safetyPayoff/(numAgentsPlay))+0.1*Gsafety;
-	}
-	else
-	{
-		safety = safety*0.8+0.2*Gsafety;
-	}
-
+    
 
    //Calculating min and max coordinates for infrastructure search
    if(center.getX()>=Ccenter.getX())
@@ -348,45 +342,25 @@ void Commuter::Travel(double Gsafety,double TransCost,repast::SharedContext<Comm
 	YSearch[1]=Ccenter.getY();
    }
 	
-
-  	std::vector<Infrastructure*>::iterator Infrastr = InfinRange.begin();
-	while(Infrastr != InfinRange.end())									//Removing saftey of previously used infastructure to account for any removed
-	{
-		if((*Infrastr)->getInfType()==0)
-		{	
-			double InfSafe = (*Infrastr)->getOldProvVar();
-			InfReach = (*Infrastr)->getReach();
-			InfArea  = PI*(InfReach)*(InfReach);
-			infAreasum=	infAreasum+(InfArea/2);		
-			infSafesum=	infSafesum+(InfArea/2)*InfSafe;
-			infRSafesum=infRSafesum+(InfReach/2)*InfSafe;
-			infReachsum=infReachsum+(InfReach/2);
-		}
-		else if((*Infrastr)->getInfType()==1)
+  		std::vector<Infrastructure*>::iterator Infrastr = InfinRange.begin();
+		while(Infrastr != InfinRange.end())				//Removing safety of previously used infastructure to account for any removed or decreased in effectiveness since last time step
+//Probelem comes when the safety has decreased 
 		{
-			CycleCost=CycleCost+((*Infrastr)->getOldProvVar()*48);
+			if((*Infrastr)->getInfType()==1)
+			{
+				CycleCost=CycleCost+((*Infrastr)->getOldProvVar()*48);
+			}
+			Infrastr++;
 		}
-	}
 
-	if(CommuteArea!=0)
-		{
-			safety=(infSafesum+((CommuteArea-InfArea)*safety))/CommuteArea;
-			safety= (safety*CommuteArea-infSafesum)/(CommuteArea-InfArea);
 
-		}
-		else
-		{
-			safety=(infRSafesum+((TravelDist-infReachsum)*safety))/TravelDist;
-			safety = (safety*TravelDist-infRSafesum)/(TravelDist-infReachsum);
-		}
-	
-		InfReach = 0;	//resetting variables to be used for calculating saftey from current infrastructure
-		InfArea  = 0;
-		infAreasum=	0;		
-		infSafesum=	0;
-		infRSafesum=0;
-		infReachsum=0;
-
+		//InfReach = 0;	//resetting variables to be used for calculating safety from current infrastructure
+		//InfArea  = 0;
+		//infAreasum=	0;		
+		//infSafesum=	0;
+		//infRSafesum=0;
+		//infReachsum=0;
+	InfinRange.clear();		//Clearing infrastructure vector to ensure there aren't duplicates in the vector
 	Infrastr = Infrastruct.begin();
    	while(Infrastr != Infrastruct.end()){
 		std::vector<int> InfLoc;
@@ -399,7 +373,7 @@ void Commuter::Travel(double Gsafety,double TransCost,repast::SharedContext<Comm
 		{
 			InfReach = (*Infrastr)->getReach();	//finding area of range
 			InfArea  = PI*(InfReach)*(InfReach);
-			if((*Infrastr)->getInfType()==0&&((*Infrastr)->getProvVar())>safety)	//if saftey infrastructure and provided saftey bigger than agent current safety perception
+			if((*Infrastr)->getInfType()==0&&((*Infrastr)->getProvVar())>InfraSafety)	//if safety infrastructure and provided safety bigger than agent current safety perception
 			{
 				InfinRange.push_back(*Infrastr);
 				double InfSafe = (*Infrastr)->getProvVar();
@@ -425,7 +399,7 @@ void Commuter::Travel(double Gsafety,double TransCost,repast::SharedContext<Comm
 						InfinRange.push_back(*Infrastr);
 						if(Health<1)
 						{
-							Health=Health*(*Infrastr)->getProvVar();
+							Health=Health*(1+((*Infrastr)->getProvVar())*exp(-2*Health));//larger effect with lower health
 							if(Health>1)
 							{
 								Health=1;
@@ -441,7 +415,7 @@ void Commuter::Travel(double Gsafety,double TransCost,repast::SharedContext<Comm
 					InfinRange.push_back(*Infrastr);
 					if(CycleAbility!=1)
 					{
-						CycleAbility=CycleAbility*(*Infrastr)->getProvVar();;
+						CycleAbility=CycleAbility*(*Infrastr)->getProvVar();
 					}
 					if(CycleAbility<0.05)
 					{
@@ -453,19 +427,61 @@ void Commuter::Travel(double Gsafety,double TransCost,repast::SharedContext<Comm
 		}
 	Infrastr++;
 	}
-	if(InfArea!=0&&infSafesum!=0)
+	if((infSafesum*infRSafesum)!=0&&InfinRange.size()!=0)
 	{
 		if(CommuteArea!=0)
 		{
-			safety=(infSafesum+((CommuteArea-InfArea)*safety))/CommuteArea;
+			if(infAreasum>CommuteArea)	//if infrastructure covers whole area
+			{
+				InfraSafety=(infSafesum/infAreasum);
+			}
+			else
+			{
+				InfraSafety=(infSafesum+((CommuteArea-infAreasum)*InfraSafety))/CommuteArea;
+			}
+			if(InfraSafety>1){std::cout<<"It was line 473 that donz it"<<std::endl;}
 
 		}
-		else
+		else if(TravelDist!=0)
 		{
-			safety=(infRSafesum+((TravelDist-infReachsum)*safety))/TravelDist;
+			if(infReachsum>TravelDist)	//if infrastructure covers whole area
+			{
+				InfraSafety=(infRSafesum/infReachsum);
+			}
+			else
+			{
+				InfraSafety=(infRSafesum+((TravelDist-infReachsum)*InfraSafety))/TravelDist;
+			}
+			if(InfraSafety>1){std::cout<<"It was line 486 that donz it"<<std::endl;}
 		}
 
 	}
+	
+
+	//Communicatiing with nearby agents and reciving global safety to influence safety perception
+	std::vector<Commuter*>::iterator agentToPlay = agentsToPlay.begin();
+    while(agentToPlay != agentsToPlay.end()){
+        std::vector<int> otherLoc;
+        space->getLocation((*agentToPlay)->getId(), otherLoc);
+        repast::Point<int> otherPoint(otherLoc);
+        
+        safetyPayoff = safetyPayoff + ((*agentToPlay)->getSafe());
+        numAgentsPlay++;
+        agentToPlay++;
+    }
+
+
+	if(numAgentsPlay>0)
+	{
+    		SocialSafety = SocialSafety*0.7+0.2*(safetyPayoff/(numAgentsPlay))+0.1*Gsafety;
+	}
+	else
+	{
+		SocialSafety = SocialSafety*0.8+0.2*Gsafety;
+	}
+
+	//Finding new saftey from average of safety from other agents and from infrastruture
+	safety=(InfraSafety+SocialSafety)/2;
 
 	//Calling function to choose transport method
     ChooseMode(TransCost);
@@ -480,24 +496,36 @@ void Commuter::Travel(double Gsafety,double TransCost,repast::SharedContext<Comm
 		}
 		if(Health<=1)
 		{
-			Health=Health*1.04;	//Health increase if chosen cycling
+			Health=Health*(1+(0.04*exp(-2*Health)));	//Health increase if chosen cycling larger effect on those with lower health
 			if(Health>1)
 			{
 				Health=1;
 			}
 		}
 	}
-	if(TransMode==2)
+	else if(TransMode==2)
 	{
 		if(Health<=1)
 		{
-			Health=Health*1.02;	//Health increas if chosen walking
+			Health=Health*(1+(0.02*exp(-2*Health)));	//Health increas if chosen walking
 			if(Health>1)
 			{
 				Health=1;
 			}
 		}
 	}
+	else if(TransMode==0)
+		if(Health<=1&&Health>=0.5)
+		{
+			//Health=Health*(1-(0.005*exp(-2*Health))); //decreased health if driving only, only decreases by a small amount
+			Health=Health*(1-(0.003));
+		}
+		else if(Health<0.5)
+		{
+         	Health=Health;
+		}
+
+
 
     timestep++;
 }

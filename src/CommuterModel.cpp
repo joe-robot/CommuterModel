@@ -23,8 +23,7 @@ CommuterModel::CommuterModel(std::string propsFile, int argc, char** argv, boost
 	stopAt = repast::strToInt(props->getProperty("stop.at"));
 	countOfAgents = repast::strToInt(props->getProperty("count.of.agents"));
 	EndcountOfAgents = repast::strToInt(props->getProperty("count.of.agents.end"));
-	countOfInfAgents = repast::strToInt(props->getProperty("count.of.infrastructure.agents"));
-	
+	countOfInfAgents = repast::strToInt(props->getProperty("initial.count.of.infrastructure.agents"));
 	initializeRandom(*props, comm);
 	Gsafety=0;
 	TransCost=repast::strToInt(props->getProperty("public.transport.cost"));
@@ -32,6 +31,9 @@ CommuterModel::CommuterModel(std::string propsFile, int argc, char** argv, boost
    	repast::Point<double> origin(-300,-300);
    	repast::Point<double> extent(601, 601);
     newAgent=floor(1/(((double)EndcountOfAgents-(double)countOfAgents)/((double)stopAt-(double)timeinsteps)));
+	newInfAgent=repast::strToInt(props->getProperty("Inf.Agent.Add.Rate"));
+	newInfAgenttype=repast::strToInt(props->getProperty("Inf.Agent.Type"));
+	newInfAgenttemplate=repast::strToInt(props->getProperty("Inf.Agent.Template"));
     	repast::GridDimensions gd(origin, extent);
     
 	//sets to run on just 1 core
@@ -104,22 +106,12 @@ void CommuterModel::init(){
        	discreteSpace->moveTo(id, initialLocation);
 	}
 
-	/*for(int i = 0; i < countOfInfAgents; i++){ 
-        	repast::Point<int> initialLocation(0,0);
-		repast::AgentId id(i, rank, 1);
-		id.currentRank(rank);
-		Infrastructure* agent = new Infrastructure(id,1,1,1,0.5);
-		Infcontext.addAgent(agent);
-       		discreteInfSpace->moveTo(id, initialLocation);
-	}*/
 }
 
 
 
 void CommuterModel::commute(){
 	int TransMode;	
-	NumCar=0;
-	NumCycle=0;
 	getGSafe();
 	std::vector<Commuter*> agents;
 	std::vector<Infrastructure*> Infagents;
@@ -128,9 +120,11 @@ void CommuterModel::commute(){
 	{
 		addAgents(1);
 	}
-
-
-
+	//Adding Infrastructure Agents
+	if(((double)timeinsteps+1.0)/newInfAgent==ceil(((double)timeinsteps+1.0)/newInfAgent))
+	{
+		addInfAgents(newInfAgenttype,newInfAgenttemplate,10,0);
+	}
 
 	context.selectAgents(repast::SharedContext<Commuter>::LOCAL, countOfAgents, agents);
 	std::vector<Commuter*>::iterator it = agents.begin();
@@ -145,40 +139,45 @@ void CommuterModel::commute(){
  	it = agents.begin();
    	while(it != agents.end()){  //Need similar for recivieing infrastructure information
 		TransMode= (*it)->getMode();
+		double safezz=(*it)->getSafe();
 		if(TransMode ==1)
 		{
-			std::cout<<"just another cycleist: " << (*it)->getId() << " at "<< timeinsteps << std::endl;
+			std::cout<<"just another cycleist: " << (*it)->getId() << " at "<< timeinsteps <<" Safety: "<<safezz<<" Health: "<<(*it)->getHealth()<< std::endl;
 			NumCycle++;
 		}
 		else if(TransMode==0)
 		{
-			std::cout<<"just another driver: " << (*it)->getId() << " at "<< timeinsteps << std::endl;
+			std::cout<<"just another driver: " << (*it)->getId() << " at "<< timeinsteps <<" Safety: "<<safezz<<" Health: "<<(*it)->getHealth()<< std::endl;
 			NumCar++;
 		}
 		else if(TransMode==2)
 		{
-			std::cout<<"just a walking " << (*it)->getId() << " at "<< timeinsteps << std::endl;
+			std::cout<<"just a walking " << (*it)->getId() << " at "<< timeinsteps <<" Safety: "<<safezz<<" Health: "<<(*it)->getHealth()<< std::endl;
 			NumWalk++;
 		}
 		else if(TransMode==3)
 		{
-			std::cout<<"just riding public transport: " << (*it)->getId() << " at "<< timeinsteps << std::endl;
+			std::cout<<"just riding public transport: " << (*it)->getId() << " at "<< timeinsteps <<" Safety: "<<safezz<<" Health: "<<(*it)->getHealth()<< std::endl;
 			NumPTrans++;
 		}
 		it++;
     }
 
 	//Retriving infrastructure information
-	Infcontext.selectAgents(repast::SharedContext<Infrastructure>::LOCAL, countOfInfAgents, Infagents);
-	std::vector<Infrastructure*>::iterator Infit = Infagents.begin();
-	while(Infit != Infagents.end()) //what info needs to be retrived though? cost maybe?
+	if(countOfInfAgents!=0)
 	{
+		Infcontext.selectAgents(repast::SharedContext<Infrastructure>::LOCAL, countOfInfAgents, Infagents);
+		std::vector<Infrastructure*>::iterator Infit = Infagents.begin();
+		while(Infit != Infagents.end()) //what info needs to be retrived though? cost maybe?
+		{
 		
+			Infit++;
 
-
+		}
 	}
-	discreteSpace->balance();
-  	timeinsteps++;
+		discreteSpace->balance();
+  		timeinsteps++;
+
 }
 
 void CommuterModel::initSchedule(repast::ScheduleRunner& runner){
@@ -230,13 +229,26 @@ void CommuterModel::addAgents(int NumAgents) //function to add agents to the mod
        	repast::Point<int> initialLocation(dist*sin(angle),dist*cos(angle));	//Distributing agents randomly
 		repast::AgentId id(countOfAgents, rank, 0);
 		id.currentRank(rank);
-		Commuter* agent = new Commuter(id,NumCar/countOfAgents,NumCycle/countOfAgents,NumWalk/countOfAgents,NumPTrans/countOfAgents);
+		Commuter* agent = new Commuter(id,(double)NumCar/(double)countOfAgents,(double)NumCycle/(double)countOfAgents,(double)NumWalk/(double)countOfAgents,(double)NumPTrans/(double)countOfAgents);
+
 		context.addAgent(agent);
        	discreteSpace->moveTo(id, initialLocation);
 		countOfAgents++;
 	}
+}
 
-
+void CommuterModel::addInfAgents(int type, int temp,int range, int pvar) //function to add infrastrucure agents to the model
+{
+		//int rank = repast::RepastProcess::instance()->rank();
+		double Infdist =  (repast::Random::instance()->getGenerator("duni")->next())*50;
+		double Infangle  = (repast::Random::instance()->getGenerator("duni")->next())*2*PI;
+        repast::Point<int> initialLocation(Infdist*sin(Infangle),Infdist*cos(Infangle));
+		repast::AgentId id(countOfInfAgents, 0, 1);
+		id.currentRank(0);
+		Infrastructure* agent = new Infrastructure(id,type,temp,range,pvar);
+		Infcontext.addAgent(agent);
+       	discreteInfSpace->moveTo(id, initialLocation);
+		countOfInfAgents++;
 }
 
 void CommuterModel::IncreaseTransCost()
@@ -245,8 +257,8 @@ void CommuterModel::IncreaseTransCost()
 } 
 
 void CommuterModel::recordResults(){
-		std::string seperator=";";
-		std::vector<std::string> key = {"Month","P Transport Cost"};
+		std::string seperator=",";
+		std::vector<std::string> key = {"Month","P Transport Cost","Count of Inf"};
 		std::string fileName="./output/Modelresults.csv";
 		 bool writeHeader =  !boost::filesystem::exists(fileName);
  		 std::ofstream outFile;
@@ -267,7 +279,8 @@ void CommuterModel::recordResults(){
 		}
 
     outFile << std::fixed << timeinsteps << (seperator);
-	 outFile << std::fixed << TransCost	<<("");
+	 outFile << std::fixed << TransCost	<<(seperator);
+	outFile << std::fixed <<countOfInfAgents	<<(" ");
 
   outFile << std::endl;
 

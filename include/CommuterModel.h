@@ -28,6 +28,9 @@ class CommuterModel{
 	int NumCar;
 	int NumWalk;
 	int NumPTrans;
+	double newInfAgent;
+	int newInfAgenttype;
+	int newInfAgenttemplate;
 	double newAgent=0;
 	double TransCost;
 	double TransCostIncrease;
@@ -46,6 +49,7 @@ public:
 	~CommuterModel();
 	void init();
 	void addAgents(int NumAgents);
+	void addInfAgents(int type, int temp,int range, int pvar);
 	void commute();
 	void initSchedule(repast::ScheduleRunner& runner);
 	void recordResults();

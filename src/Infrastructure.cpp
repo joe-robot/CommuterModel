@@ -72,7 +72,7 @@ Infrastructure::Infrastructure(repast::AgentId id, int newInfType, int InfTempla
 	{
 		if(InfTemplate==0)		//A get healthy living campaign
 		{	
-			ProvVar=1 + (repast::Random::instance()->getGenerator("duni")->next())*0.05;		//Provides a randomly chosen amount of health for those who take it up with 5% improvement as max
+			ProvVar=(repast::Random::instance()->getGenerator("duni")->next())*0.05;		//Provides a randomly chosen amount of health for those who take it up with 5% improvement as max
 			OldProvVar=ProvVar;
 			maxCapacity=Reach*50;	//large capacity
 			CostPerAgent=0;
@@ -81,8 +81,8 @@ Infrastructure::Infrastructure(repast::AgentId id, int newInfType, int InfTempla
 		}
 		if(InfTemplate==1)		//Providing free fitness classes
 		{
-			ProvVar=1.05;		//Provides a 5% improvement in health
-			OldProvVar=1.05;
+			ProvVar=0.05;		//Provides a 5% improvement in health
+			OldProvVar=0.05;
 			maxCapacity=Pvar;
 			Capacity=0;
 			CostPerAgent=0.02*4;
@@ -137,6 +137,7 @@ int Infrastructure::use(repast:: SharedDiscreteSpace<Infrastructure, repast::Wra
 
 	if(InfType==0)		//If infrastructure is saftey boosting infrastructure
 	{
+	
 		if(Capacity<maxCapacity)
 		{
 			ProvVar=0.75+(-1*exp((log((ProvVar-0.75)+1)/maxCapacity)*Capacity))+1+ProvVar-0.75;	//Calculating the provided saftey with capacity minimum saftey being 0.7
@@ -168,7 +169,7 @@ int Infrastructure::use(repast:: SharedDiscreteSpace<Infrastructure, repast::Wra
 		}
 		else
 		{
-			ProvVar=1;
+			ProvVar=0;
 		}
 	}
 	else if(InfType==3)	//If Infrastructure is Cycle training infrastructure

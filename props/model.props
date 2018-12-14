@@ -2,7 +2,7 @@
 stop.at = 360
 count.of.agents = 400
 count.of.agents.end=450
-count.of.infrastructure.agents = 1
+initial.count.of.infrastructure.agents = 0
 
 initial.car.proportion=75;
 initial.bike.proportion=2;
@@ -11,7 +11,12 @@ initial.ptrans.proportion=13;
 
 random.seed =2
 distribution.lognor = lognormal, 1, 1
-distribution.duni=double_uniform,0,1
+distribution.duni=double_uniform, 0, 1
 
 public.transport.cost=15
 public.transport.cost.increase=2
+
+Inf.Agent.Add.Rate=400
+Inf.Agent.Type=0
+Inf.Agent.Template=0
+
