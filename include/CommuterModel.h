@@ -55,6 +55,8 @@ public:
 	void recordResults();
 	void IncreaseTransCost();
 	double getTransCost() {return TransCost;};
+	void recordAgentPositions();
+	void recordInfAgentPositions();
 private:
 	int CalcCosts();
 	void getGSafe();

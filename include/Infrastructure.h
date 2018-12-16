@@ -40,6 +40,7 @@ public:
     double getProvVar(){                          return ProvVar;  }
 	double getOldProvVar(){						 return OldProvVar; }
 	int getInfType(){								 return InfType;}
+	double getInfCost(){							return InfCost;}
 	
     /* Setter */
     void set(int currentRank, int newInfType,int newCap, int newMaxCap, int newReach, double newPVar, double newInfCost,double	newCostPerAgent);

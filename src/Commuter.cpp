@@ -392,7 +392,7 @@ void Commuter::Travel(double Gsafety,double TransCost,repast::SharedContext<Comm
 			}
 			else if((*Infrastr)->getInfType()==2)
 			{
-				if(repast::Random::instance()->getGenerator("duni")->next()<0.1)
+				if(repast::Random::instance()->getGenerator("duni")->next()<0.1&&Health<0.9)		//10% chance of using health infrastructure and won't use if above 90% health
 				{
 					if(Health!=0)
 					{
@@ -405,12 +405,13 @@ void Commuter::Travel(double Gsafety,double TransCost,repast::SharedContext<Comm
 								Health=1;
 							}
 						}
+						(*Infrastr)->use(Infspace);		//Don't need to be a cyclist alredy to use this
 					}
 				}
 			}
 			else if((*Infrastr)->getInfType()==3)
 			{
-				if(repast::Random::instance()->getGenerator("duni")->next()<0.1)
+				if(repast::Random::instance()->getGenerator("duni")->next()<0.1&&CycleAbility<0.9)		//10% chance of taking up lessons and won't use if above 0.9 ability
 				{
 					InfinRange.push_back(*Infrastr);
 					if(CycleAbility!=1)
@@ -419,8 +420,9 @@ void Commuter::Travel(double Gsafety,double TransCost,repast::SharedContext<Comm
 					}
 					if(CycleAbility<0.05)
 					{
-						CycleAbility=0.05;
+						CycleAbility=0.05;	//Don't need to be a cyclist already to use this
 					}
+					(*Infrastr)->use(Infspace);
 				}
 			}
 		numInf++;
@@ -491,7 +493,11 @@ void Commuter::Travel(double Gsafety,double TransCost,repast::SharedContext<Comm
 	{
 		Infrastr = InfinRange.begin();
   		while(Infrastr != InfinRange.end()){
-			(*Infrastr)-> use(Infspace);
+			if(((*Infrastr)->getInfType())==0||((*Infrastr)->getInfType())==1)
+			{
+				(*Infrastr)-> use(Infspace);
+				
+			}
 			Infrastr++;
 		}
 		if(Health<=1)

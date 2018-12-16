@@ -16,7 +16,8 @@ distribution.duni=double_uniform, 0, 1
 public.transport.cost=15
 public.transport.cost.increase=2
 
-Inf.Agent.Add.Rate=400
-Inf.Agent.Type=0
-Inf.Agent.Template=0
+Inf.Agent.Add.Rate=12
+Inf.Agent.Type=2
+Inf.Agent.Template=1
+Inf.Agent.PVar = 2
 

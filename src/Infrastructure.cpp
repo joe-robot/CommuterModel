@@ -149,9 +149,10 @@ int Infrastructure::use(repast:: SharedDiscreteSpace<Infrastructure, repast::Wra
 	}
 	else if(InfType==1)	//If infrastucture is economic subsidising infrastructure
 	{	
-		InfCost=InfCost+CostPerAgent;
+		
 		if(Capacity<maxCapacity&&InfCost>=maxCapacity*CostPerAgent)
 		{
+			InfCost=InfCost+CostPerAgent;
 			ProvVar=ProvVar;
 		}
 		else
@@ -162,9 +163,10 @@ int Infrastructure::use(repast:: SharedDiscreteSpace<Infrastructure, repast::Wra
 	}
 	else if(InfType==2)	//If infrastructure is Health improving infrastructure
 	{
-		InfCost=InfCost+CostPerAgent;
+		
 		if(Capacity<maxCapacity&&InfCost>=maxCapacity*CostPerAgent)
 		{
+			InfCost=InfCost+CostPerAgent;
 			ProvVar=ProvVar;
 		}
 		else
@@ -174,9 +176,10 @@ int Infrastructure::use(repast:: SharedDiscreteSpace<Infrastructure, repast::Wra
 	}
 	else if(InfType==3)	//If Infrastructure is Cycle training infrastructure
 	{
-		InfCost=InfCost+CostPerAgent;
+		
 		if(Capacity<maxCapacity&&InfCost>=maxCapacity*CostPerAgent)
 		{
+			InfCost=InfCost+CostPerAgent;
 			ProvVar=ProvVar;
 		}
 		else

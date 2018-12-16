@@ -112,6 +112,7 @@ void CommuterModel::init(){
 
 void CommuterModel::commute(){
 	int TransMode;	
+	int InfVar=repast::strToInt(props->getProperty("Inf.Agent.PVar"));
 	getGSafe();
 	std::vector<Commuter*> agents;
 	std::vector<Infrastructure*> Infagents;
@@ -121,9 +122,9 @@ void CommuterModel::commute(){
 		addAgents(1);
 	}
 	//Adding Infrastructure Agents
-	if(((double)timeinsteps+1.0)/newInfAgent==ceil(((double)timeinsteps+1.0)/newInfAgent))
+	if(((double)timeinsteps+1.0)/newInfAgent==ceil(((double)timeinsteps+1.0)/newInfAgent)&&timeinsteps>=107)	//only begin adding infrastructure after end of 2018
 	{
-		addInfAgents(newInfAgenttype,newInfAgenttemplate,10,0);
+		addInfAgents(newInfAgenttype,newInfAgenttemplate,10,InfVar);
 	}
 
 	context.selectAgents(repast::SharedContext<Commuter>::LOCAL, countOfAgents, agents);
@@ -185,8 +186,12 @@ void CommuterModel::initSchedule(repast::ScheduleRunner& runner){
 	runner.scheduleEvent(0, 1, repast::Schedule::FunctorPtr(new repast::MethodFunctor<CommuterModel> (this, &CommuterModel::commute)));
 	runner.scheduleEvent(11, 12, repast::Schedule::FunctorPtr(new repast::MethodFunctor<CommuterModel> (this, &CommuterModel::IncreaseTransCost)));	//increasing public transport cost each year
 	runner.scheduleEvent(0, 1, repast::Schedule::FunctorPtr(new repast::MethodFunctor<CommuterModel> (this, &CommuterModel::recordResults)));
-	runner.scheduleStop(stopAt);
+	runner.scheduleEvent(0, repast::Schedule::FunctorPtr(new repast::MethodFunctor<CommuterModel> (this, &CommuterModel::recordAgentPositions)));//Record agent positions at start and at end of the simulation
+	runner.scheduleEndEvent(repast::Schedule::FunctorPtr(new repast::MethodFunctor<CommuterModel> (this, &CommuterModel::recordAgentPositions)));
+	runner.scheduleEvent(0,12, repast::Schedule::FunctorPtr(new repast::MethodFunctor<CommuterModel> (this, &CommuterModel::recordInfAgentPositions)));//record infrastructure positions ever 12 months
+	
 
+	runner.scheduleStop(stopAt);
 
 	//Data Collection
 	runner.scheduleEvent(0.5, 1, repast::Schedule::FunctorPtr(new repast::MethodFunctor<repast::DataSet>(agentValues, &repast::DataSet::record)));
@@ -239,10 +244,18 @@ void CommuterModel::addAgents(int NumAgents) //function to add agents to the mod
 
 void CommuterModel::addInfAgents(int type, int temp,int range, int pvar) //function to add infrastrucure agents to the model
 {
+		repast::Point<int> initialLocation(0,0);
 		//int rank = repast::RepastProcess::instance()->rank();
-		double Infdist =  (repast::Random::instance()->getGenerator("duni")->next())*50;
-		double Infangle  = (repast::Random::instance()->getGenerator("duni")->next())*2*PI;
-        repast::Point<int> initialLocation(Infdist*sin(Infangle),Infdist*cos(Infangle));
+		if(type==1)	//If economic subsidising infrastructure...place at centre
+		{
+			repast::Point<int> initialLocation(0,0);
+		}
+		else
+		{
+			double Infdist =  (repast::Random::instance()->getGenerator("duni")->next())*50;
+			double Infangle  = (repast::Random::instance()->getGenerator("duni")->next())*2*PI;
+        	repast::Point<int> initialLocation(Infdist*sin(Infangle),Infdist*cos(Infangle));
+		}
 		repast::AgentId id(countOfInfAgents, 0, 1);
 		id.currentRank(0);
 		Infrastructure* agent = new Infrastructure(id,type,temp,range,pvar);
@@ -257,8 +270,9 @@ void CommuterModel::IncreaseTransCost()
 } 
 
 void CommuterModel::recordResults(){
+		double infCost=0;
 		std::string seperator=",";
-		std::vector<std::string> key = {"Month","P Transport Cost","Count of Inf"};
+		std::vector<std::string> key = {"Month","P Transport Cost","Count of Inf","Inf Cost"};
 		std::string fileName="./output/Modelresults.csv";
 		 bool writeHeader =  !boost::filesystem::exists(fileName);
  		 std::ofstream outFile;
@@ -266,26 +280,123 @@ void CommuterModel::recordResults(){
   		outFile.open(fileName.c_str(), std::ios::app);
 		if(writeHeader)
 		{
-    		std::vector<std::string>::iterator keys      = key.begin();
-    		std::vector<std::string>::iterator keysEnd   = key.end();
+    			std::vector<std::string>::iterator keys      = key.begin();
+    			std::vector<std::string>::iterator keysEnd   = key.end();
 
-    		int i = 1;
-    		while(keys != keysEnd){
-     			 outFile << *keys << (i!=key.size() ? seperator:"");
-     			 keys++;
-      			 i++;
-    		}
-    outFile << std::endl;
+    			int i = 1;
+    			while(keys != keysEnd){
+     				 outFile << *keys << (i!=key.size() ? seperator:"");
+     				 keys++;
+      				i++;
+    			}
+   			outFile << std::endl;
+		}
+		std::vector<Infrastructure*> Allagents;
+		Infcontext.selectAgents(repast::SharedContext<Infrastructure>::LOCAL, countOfAgents, Allagents);
+		std::vector<Infrastructure*>::iterator it = Allagents.begin();
+   		while(it != Allagents.end())
+		{ 
+			infCost=infCost+(*it)->getInfCost();
+			it++;			
 		}
 
-    outFile << std::fixed << timeinsteps << (seperator);
-	 outFile << std::fixed << TransCost	<<(seperator);
-	outFile << std::fixed <<countOfInfAgents	<<(" ");
+    	outFile << std::fixed << timeinsteps << (seperator);
+	outFile << std::fixed << TransCost	<<(seperator);
+	outFile << std::fixed <<countOfInfAgents<<(seperator);
+	outFile << std::fixed <<infCost	<<(" ");
 
-  outFile << std::endl;
+ 	outFile << std::endl;
+
+  	outFile.close();
+}
+
+void CommuterModel::recordAgentPositions(){
+		std::string seperator=",";
+		std::vector<std::string> key = {"Month","Xposition","YPosition"};
+		std::string fileName="./output/AgentPositions.csv";
+		 bool writeHeader =  !boost::filesystem::exists(fileName);
+ 		 std::ofstream outFile;
+
+  		outFile.open(fileName.c_str(), std::ios::app);
+		if(writeHeader)
+		{
+    			std::vector<std::string>::iterator keys      = key.begin();
+    			std::vector<std::string>::iterator keysEnd   = key.end();
+
+    			int i = 1;
+    			while(keys != keysEnd){
+     				 outFile << *keys << (i!=key.size() ? seperator:"");
+     				 keys++;
+      				 i++;
+    			}
+    			outFile << std::endl;
+		}
+		std::vector<int> agentLoc;
+		std::vector<Commuter*> Allagents;
+		context.selectAgents(repast::SharedContext<Commuter>::LOCAL, countOfAgents, Allagents);
+		std::vector<Commuter*>::iterator it = Allagents.begin();
+   		while(it != Allagents.end()){ 
+			discreteSpace->getLocation((*it)->getId(), agentLoc);
+			repast::Point<int> AgentsPoint(agentLoc);
+			outFile << std::fixed << timeinsteps << (seperator);
+	 		outFile << std::fixed << AgentsPoint.getX()<<(seperator);
+			outFile << std::fixed <<AgentsPoint.getY()<<(" ");
+
+  			outFile << std::endl;
+			it++;
+
+		}
 
   outFile.close();
 }
+
+void CommuterModel::recordInfAgentPositions(){
+		std::string seperator=",";
+		std::vector<std::string> key = {"Month","Xposition","YPosition","Type","Help Provided"};
+		if(countOfInfAgents!=0)
+		{
+			std::string fileName="./output/InfAgentPositions.csv";
+			 bool writeHeader =  !boost::filesystem::exists(fileName);
+ 		 	std::ofstream outFile;
+
+  			outFile.open(fileName.c_str(), std::ios::app);
+			if(writeHeader)
+			{
+    			std::vector<std::string>::iterator keys      = key.begin();
+    			std::vector<std::string>::iterator keysEnd   = key.end();
+
+    			int i = 1;
+    			while(keys != keysEnd){
+     				 outFile << *keys << (i!=key.size() ? seperator:"");
+     				 keys++;
+      				 i++;
+    			}
+    			outFile << std::endl;
+			}
+			std::vector<int> agentLoc;
+			std::vector<Infrastructure*> Allagents;
+			Infcontext.selectAgents(repast::SharedContext<Infrastructure>::LOCAL, countOfInfAgents, Allagents);
+			std::vector<Infrastructure*>::iterator it = Allagents.begin();
+   			while(it != Allagents.end()){ 
+				discreteInfSpace->getLocation((*it)->getId(), agentLoc);
+				repast::Point<int> AgentsPoint(agentLoc);
+				outFile << std::fixed << timeinsteps << (seperator);
+	 			outFile << std::fixed << AgentsPoint.getX()<<(seperator);
+				outFile << std::fixed << AgentsPoint.getY()<<(seperator);
+				outFile << std::fixed << (*it)->getInfType()<<(seperator);
+				outFile << std::fixed <<(*it)->getProvVar()<<(" ");
+
+  				outFile << std::endl;
+				it++;
+
+			}
+
+  	outFile.close();
+	}
+}
+
+
+
 
 //Data source classes
 
