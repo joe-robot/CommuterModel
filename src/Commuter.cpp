@@ -549,4 +549,3 @@ void Commuter::Travel(double Gsafety,double TransCost,repast::SharedContext<Comm
     timestep++;
 }
 
-

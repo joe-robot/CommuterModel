@@ -198,7 +198,6 @@ void CommuterModel::commute(){		//Function to get agents to commute and retrive 
 		it++;
     }
 
-
 		discreteSpace->balance();	
   		timeinsteps++;	//incrementing timeinsteps
 

@@ -2,7 +2,7 @@
 
 //By Joseph Cresswell	Reg No. 150148395
 
-//inclusing required files
+//including required files
 #include "Infrastructure.h"
 #include "repast_hpc/Moore2DGridQuery.h"
 #include "repast_hpc/Point.h"

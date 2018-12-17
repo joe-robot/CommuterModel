@@ -15,7 +15,7 @@
 class Commuter {
 
 private:
-	//Defininf private variable of commuters
+	//Defining private variable of commuters
 	repast::AgentId id_;
     double safety;
     double thresh;
