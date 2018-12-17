@@ -1,8 +1,11 @@
 /* Infrastructure.h */
 
+//By Joseph Cresswell	Reg No. 150148395
+
 #ifndef INFRASTRUCTURE
 #define INFRASTRUCTURE
 
+//including required files
 #include "repast_hpc/AgentId.h"
 #include "repast_hpc/SharedContext.h"
 #include "repast_hpc/SharedDiscreteSpace.h"
@@ -23,9 +26,9 @@ private:
 	double				CostPerAgent;
 	
 public:
-    //Infrastructure(repast::AgentId id);
+	//Constructors
 	Infrastructure(){}
-	Infrastructure(repast::AgentId id, int newInfType, int InfTempate, int newReach,int Pvar);
+	Infrastructure(repast::AgentId id, int newInfType, int InfTempate, int newReach,double Pvar);
     Infrastructure(repast::AgentId id, int newInfType, int newCap, int newMaxCap, int newReach, double newPVar,double newInfCost,double newCostPerAgent);
 	
     ~Infrastructure();
@@ -47,7 +50,7 @@ public:
 	
     /* Actions */
     int use(repast::SharedDiscreteSpace<Infrastructure, repast::WrapAroundBorders, repast::SimpleAdder<Infrastructure> >* space);    
-    //void move(repast::SharedDiscreteSpace<Infrastructure, repast::WrapAroundBorders, repast::SimpleAdder<Infrastructure> >* space); //Don't want this to move
+
     
 };
 

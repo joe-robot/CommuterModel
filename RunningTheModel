@@ -1,0 +1,8 @@
+//How to run the model
+
+Adjust env file to meet where your repast libraries are
+
+In the terminal define the LD_LIBRARY_PATH:
+
+LD_LIBRARY_PATH=~/sfw/repast_hpc-2.2.0/lib:~/sfw/Boost/Boost_1.61/lib/
+export LD_LIBRARY_PATH

@@ -1,10 +1,13 @@
 /* Infrastructure.cpp */
 
+//By Joseph Cresswell	Reg No. 150148395
+
+//inclusing required files
 #include "Infrastructure.h"
 #include "repast_hpc/Moore2DGridQuery.h"
 #include "repast_hpc/Point.h"
 
-Infrastructure::Infrastructure(repast::AgentId id, int newInfType, int InfTemplate,int newReach, int Pvar)
+Infrastructure::Infrastructure(repast::AgentId id, int newInfType, int InfTemplate,int newReach, double Pvar) //Constructer for infrastructure agents where templates are used that are based on real infrastructures and dataa
 {
 	id_=id;
 	InfType=newInfType;
@@ -40,7 +43,7 @@ Infrastructure::Infrastructure(repast::AgentId id, int newInfType, int InfTempla
 		}
 		if(InfTemplate==3) //Template for a cycle crossing (typically very small reach..just a crossing)
 		{
-			InfCost =  ((double)Reach/10)*0.14;	//0.14 million per crossing
+			InfCost =  ((double)Reach)*0.14;	//0.14 million per crossing
 			ProvVar=1;
 			OldProvVar=1;
 			maxCapacity=5*Reach;
@@ -53,8 +56,8 @@ Infrastructure::Infrastructure(repast::AgentId id, int newInfType, int InfTempla
 		{
 			ProvVar=5*4;	//5 pounds per week
 			OldProvVar=5*4;
-			maxCapacity=Pvar;
-			CostPerAgent=(ProvVar/1000);
+			CostPerAgent=(ProvVar/1000);	
+			maxCapacity=Pvar/CostPerAgent;	//Pvar gives amount of invetment so max is found by dividing invetment by cost per agent
 			Capacity= 0;
 			InfCost=(double)Capacity*CostPerAgent;
 		}
@@ -62,9 +65,9 @@ Infrastructure::Infrastructure(repast::AgentId id, int newInfType, int InfTempla
 		{
 			ProvVar=10*4;	//10 pounds per week
 			OldProvVar=10*4;
-			maxCapacity=Pvar;
 			Capacity= 0;
 			CostPerAgent=(ProvVar/1000);
+			maxCapacity=Pvar/CostPerAgent;//Pvar gives amount of invetment so max is found by dividing invetment by cost per agent
 			InfCost=(double)Capacity*CostPerAgent;	//Cost depends on how many end up using it (initialised as 0)
 		}
 	}
@@ -81,11 +84,11 @@ Infrastructure::Infrastructure(repast::AgentId id, int newInfType, int InfTempla
 		}
 		if(InfTemplate==1)		//Providing free fitness classes
 		{
-			ProvVar=0.05;		//Provides a 5% improvement in health
-			OldProvVar=0.05;
-			maxCapacity=Pvar;
+			ProvVar=0.1;		//Provides a maximum 10% improvement in health
+			OldProvVar=0.1;
 			Capacity=0;
-			CostPerAgent=0.02*4;
+			CostPerAgent=0.01*4;
+			maxCapacity=Pvar/CostPerAgent;//Pvar gives amount of invetment so max is found by dividing invetment by cost per agent
 			InfCost=Capacity*CostPerAgent;	//20 pounds per person per class depend how many take it up(each agent is 1000 people)
 		}
 
@@ -96,9 +99,9 @@ Infrastructure::Infrastructure(repast::AgentId id, int newInfType, int InfTempla
 		{
 			ProvVar=1.15;		//Provides a 15% improvement in cycling ability (a month of cycle training)
 			OldProvVar=1.15;
-			maxCapacity=Pvar;
 			Capacity=0;
-			CostPerAgent=0.02*4;
+			CostPerAgent=0.01*4;
+			maxCapacity=Pvar/CostPerAgent;	//Pvar gives amount of invetment so max is found by dividing invetment by cost per agent
 			InfCost=Capacity*CostPerAgent;	//20 pounds per person per class depend how many take it up(each agent is 1000 people)
 		}
 
@@ -106,17 +109,17 @@ Infrastructure::Infrastructure(repast::AgentId id, int newInfType, int InfTempla
 	}
 }
 
-Infrastructure::Infrastructure(repast::AgentId id, int newInfType, int newCap, int newMaxCap, int newReach, double newPVar, double newInfCost,double newCostPerAgent): id_(id), InfType(newInfType),Capacity(newCap), maxCapacity(newMaxCap), Reach(newReach), ProvVar(newPVar), OldProvVar(newPVar), InfCost(newInfCost), CostPerAgent(newCostPerAgent){ }
+Infrastructure::Infrastructure(repast::AgentId id, int newInfType, int newCap, int newMaxCap, int newReach, double newPVar, double newInfCost,double newCostPerAgent): id_(id), InfType(newInfType),Capacity(newCap), maxCapacity(newMaxCap), Reach(newReach), ProvVar(newPVar), OldProvVar(newPVar), InfCost(newInfCost), CostPerAgent(newCostPerAgent){ } //infrastructure contructure where all paramters can be set without templates
 
 Infrastructure::~Infrastructure(){ }
 
 
-void Infrastructure::set(int currentRank,int newInfType, int newCap, int newMaxCap, int newReach, double newPVar, double newInfCost,double	newCostPerAgent){
+void Infrastructure::set(int currentRank,int newInfType, int newCap, int newMaxCap, int newReach, double newPVar, double newInfCost,double	newCostPerAgent){	//Setting infrastructure parameters allowerd at anypoint (could increase funding)
     id_.currentRank(currentRank);
 	InfType=newInfType;
     Capacity     = newCap;
 	maxCapacity = newMaxCap;
-    Reach = newReach;			//Got a problem with reach as the reach circle is not included in the query!
+    Reach = newReach;			
 	InfCost=newInfCost;
 	CostPerAgent=newCostPerAgent;
 	if(ProvVar!=-1)
@@ -132,7 +135,7 @@ void Infrastructure::set(int currentRank,int newInfType, int newCap, int newMaxC
 }
 
 
-int Infrastructure::use(repast:: SharedDiscreteSpace<Infrastructure, repast::WrapAroundBorders, repast::SimpleAdder<Infrastructure> >* space){
+int Infrastructure::use(repast:: SharedDiscreteSpace<Infrastructure, repast::WrapAroundBorders, repast::SimpleAdder<Infrastructure> >* space){	//Function for using infrastructure
 	OldProvVar=ProvVar;
 
 	if(InfType==0)		//If infrastructure is saftey boosting infrastructure
@@ -140,7 +143,7 @@ int Infrastructure::use(repast:: SharedDiscreteSpace<Infrastructure, repast::Wra
 	
 		if(Capacity<maxCapacity)
 		{
-			ProvVar=0.75+(-1*exp((log((ProvVar-0.75)+1)/maxCapacity)*Capacity))+1+ProvVar-0.75;	//Calculating the provided saftey with capacity minimum saftey being 0.7
+			ProvVar=0.75+(-1*exp((log((ProvVar-0.75)+1)/maxCapacity)*Capacity))+1+ProvVar-0.75;	//Calculating the provided saftey with capacity minimum saftey being 0.7 so that the larger the capacity the less the safety
 		}
 		else
 		{
@@ -150,51 +153,44 @@ int Infrastructure::use(repast:: SharedDiscreteSpace<Infrastructure, repast::Wra
 	else if(InfType==1)	//If infrastucture is economic subsidising infrastructure
 	{	
 		
-		if(Capacity<maxCapacity&&InfCost>=maxCapacity*CostPerAgent)
+		if(InfCost<=(double)maxCapacity*CostPerAgent) //if budget not fully used
 		{
-			InfCost=InfCost+CostPerAgent;
-			ProvVar=ProvVar;
+			InfCost=InfCost+CostPerAgent;	//Add another agent to cost
+			ProvVar=ProvVar;		//provided help dosen't decrease with amount of people using it until budget fully used
 		}
 		else
 		{
-			ProvVar=0;
+			ProvVar=0;	//if budget used then provide no subsidy
 		}
 		
 	}
 	else if(InfType==2)	//If infrastructure is Health improving infrastructure
 	{
-		
-		if(Capacity<maxCapacity&&InfCost>=maxCapacity*CostPerAgent)
+		if(InfCost<=(double)maxCapacity*CostPerAgent) //If budget not used 
 		{
-			InfCost=InfCost+CostPerAgent;
-			ProvVar=ProvVar;
+			InfCost=InfCost+CostPerAgent;	//Add another agent to cost
+			ProvVar=ProvVar;		//provided help dosen't decrease with amount of people using it until budget fully used
 		}
 		else
 		{
-			ProvVar=0;
+			ProvVar=0;	//if budget used then provide no health improvement
 		}
 	}
 	else if(InfType==3)	//If Infrastructure is Cycle training infrastructure
 	{
 		
-		if(Capacity<maxCapacity&&InfCost>=maxCapacity*CostPerAgent)
+		if(InfCost<=(double)maxCapacity*CostPerAgent)	//if budget not yet used
 		{
-			InfCost=InfCost+CostPerAgent;
-			ProvVar=ProvVar;
+			InfCost=InfCost+CostPerAgent;	//Add another agent to cost
+			ProvVar=ProvVar;		//provided help dosen't decrease with amount of people using it until budget fully used
 		}
 		else
 		{
-			ProvVar=1;
+			ProvVar=1;	//if budget used then provide no cycle ability improvement
 		}
 	}
-	
-	/*if(ProvVar !=0)
-	{
-	ProvVar = ProvVar - ProvVar*(Capacity/Capacity+1);
-	}	//Need a better algorithm here it is making*/
-	
 
-	Capacity ++;
+	Capacity ++;	//Add to capacity of infrastructure
 	return ProvVar;
 
 }

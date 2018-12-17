@@ -1,8 +1,11 @@
-/* Demo_03_Agent.h */
+/* Commuter.h */
+
+//By Joseph Cresswell	Reg No. 150148395
 
 #ifndef COMMUTER
 #define COMMUTER
 
+//including required files
 #include "repast_hpc/AgentId.h"
 #include "repast_hpc/SharedContext.h"
 #include "repast_hpc/SharedDiscreteSpace.h"
@@ -12,13 +15,14 @@
 class Commuter {
 
 private:
+	//Defininf private variable of commuters
 	repast::AgentId id_;
     double safety;
     double thresh;
     int TransMode;
 	double Health;
 	double CycleAbility;
-	double CycleCost=500;
+	double CycleCost=500;	//initialising cycling cost as 500
 	double EconomicPosition;
 	int TravelDist;
     int timestep = 0;
@@ -26,11 +30,12 @@ private:
 	std::vector<Infrastructure*> InfinRange={};
 
 public:
-    Commuter(repast::AgentId id,double InitialCar,double InitialBike, double InitialWalk, double InitialPTrans);
+	//Defining commuter public functions
+    Commuter(repast::AgentId id,double InitialCar,double InitialBike, double InitialWalk, double InitialPTrans);	//Commuter constructor
     Commuter() {}
     Commuter(repast::AgentId id, int newTravelDist, double newSafe, double newThresh, int newMode, double newHealth, double newCycleAbility, double newEconomicPosition);
 
-    ~Commuter();
+    ~Commuter(); //Commuter destuctor
 
     /* Required Getters */
     virtual repast::AgentId& getId() { return id_; }
@@ -38,7 +43,6 @@ public:
 
     /* Getters specific to this kind of Agent */
     double getSafe() { return safety; }
-    //double getThresh() { return thresh; }
     int getMode() { return TransMode; }
 	double getHealth() { return Health;}
 	double getCycleAbility() {return CycleAbility;}
@@ -48,10 +52,8 @@ public:
 
     /* Actions */
     int ChooseMode(double TransCost);
-    // Will indicate whether the agent cooperates or not; probability determined by = c / total
     void Travel(double Gsafety,double TransCost, repast::SharedContext<Commuter>* context,
-        repast::SharedDiscreteSpace<Commuter, repast::WrapAroundBorders, repast::SimpleAdder<Commuter> >* space, repast::SharedDiscreteSpace<Infrastructure, repast::WrapAroundBorders, repast::SimpleAdder<Infrastructure> >* Infspace); // Choose three other agents from the given context and see if they cooperate or not
-    //void move(repast::SharedDiscreteSpace<Commuter, repast::WrapAroundBorders, repast::SimpleAdder<Commuter> >* space);
+        repast::SharedDiscreteSpace<Commuter, repast::WrapAroundBorders, repast::SimpleAdder<Commuter> >* space, repast::SharedDiscreteSpace<Infrastructure, repast::WrapAroundBorders, repast::SimpleAdder<Infrastructure> >* Infspace); 
 };
 
 #endif
